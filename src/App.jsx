@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react'
+import * as sfx from './sound'
 
 /* ------------------------------------------------------------------ */
-/*  OYUN AYARLARI — ileride backend/JSON config'e taşınabilir          */
+/*  OYUN AYARLARI                                                      */
 /* ------------------------------------------------------------------ */
 
 const TICK_MS = 880
 const BET_COUNTDOWN = 10
 const START_BALANCE = 1000
 
-/* Bahis türleri — ikisinin de RTP'si aynı: pay/şans = 6.5/7 ≈ %92.9
-   Kazanan: 1. gelsin → 1/7 şans, 6.50x
-   Plase:   ilk 2'de  → 2/7 şans, 3.25x  (= 6.50 / 2) */
 const BET_TYPES = {
   kazanan: { key: 'kazanan', label: 'Kazanan', hint: '1. gelsin', payout: 6.5 },
   plase: { key: 'plase', label: 'Plase', hint: 'İlk 2', payout: 3.25 },
@@ -27,30 +25,18 @@ const STEP_NAMES = { 1: 'MAVİ', 2: 'SARI', 3: 'KIRMIZI' }
 const SILKS = ['#E2484A', '#3D7BE8', '#E8B64C', '#9B5DE5', '#2EC27E', '#F2742C', '#29B8C9']
 
 const ROSTER = [
-  { name: 'ŞİMŞEK', fg: 88, fs: 84 },
-  { name: 'POYRAZ', fg: 82, fs: 86 },
-  { name: 'FIRTINA', fg: 90, fs: 81 },
-  { name: 'KARAYEL', fg: 79, fs: 88 },
-  { name: 'RÜZGÂR', fg: 85, fs: 83 },
-  { name: 'YILDIZ', fg: 91, fs: 87 },
-  { name: 'LODOS', fg: 77, fs: 90 },
-  { name: 'ALEV', fg: 86, fs: 79 },
-  { name: 'KASIRGA', fg: 83, fs: 85 },
-  { name: 'BORA', fg: 80, fs: 82 },
-  { name: 'TUFAN', fg: 89, fs: 78 },
-  { name: 'ZEYBEK', fg: 84, fs: 88 },
-  { name: 'YAĞIZ', fg: 78, fs: 86 },
-  { name: 'DORU', fg: 82, fs: 80 },
-  { name: 'KÜHEYLAN', fg: 90, fs: 89 },
-  { name: 'AKINCI', fg: 81, fs: 84 },
-  { name: 'CEYLAN', fg: 87, fs: 82 },
-  { name: 'ŞAHİN', fg: 85, fs: 87 },
-  { name: 'DOĞAN', fg: 83, fs: 85 },
-  { name: 'KARTAL', fg: 88, fs: 80 },
-  { name: 'ATMACA', fg: 79, fs: 89 },
-  { name: 'PARS', fg: 86, fs: 84 },
-  { name: 'ATEŞ', fg: 84, fs: 81 },
-  { name: 'TOROS', fg: 80, fs: 87 },
+  { name: 'ŞİMŞEK', fg: 88, fs: 84 }, { name: 'POYRAZ', fg: 82, fs: 86 },
+  { name: 'FIRTINA', fg: 90, fs: 81 }, { name: 'KARAYEL', fg: 79, fs: 88 },
+  { name: 'RÜZGÂR', fg: 85, fs: 83 }, { name: 'YILDIZ', fg: 91, fs: 87 },
+  { name: 'LODOS', fg: 77, fs: 90 }, { name: 'ALEV', fg: 86, fs: 79 },
+  { name: 'KASIRGA', fg: 83, fs: 85 }, { name: 'BORA', fg: 80, fs: 82 },
+  { name: 'TUFAN', fg: 89, fs: 78 }, { name: 'ZEYBEK', fg: 84, fs: 88 },
+  { name: 'YAĞIZ', fg: 78, fs: 86 }, { name: 'DORU', fg: 82, fs: 80 },
+  { name: 'KÜHEYLAN', fg: 90, fs: 89 }, { name: 'AKINCI', fg: 81, fs: 84 },
+  { name: 'CEYLAN', fg: 87, fs: 82 }, { name: 'ŞAHİN', fg: 85, fs: 87 },
+  { name: 'DOĞAN', fg: 83, fs: 85 }, { name: 'KARTAL', fg: 88, fs: 80 },
+  { name: 'ATMACA', fg: 79, fs: 89 }, { name: 'PARS', fg: 86, fs: 84 },
+  { name: 'ATEŞ', fg: 84, fs: 81 }, { name: 'TOROS', fg: 80, fs: 87 },
 ]
 
 const fmt = (n) => n.toLocaleString('tr-TR', { maximumFractionDigits: 2, minimumFractionDigits: 0 })
@@ -68,27 +54,43 @@ function pickLineup() {
 const CHIPS = [10, 25, 50, 100, 250]
 
 /* ------------------------------------------------------------------ */
-/*  AT                                                                 */
+/*  AT — yeniden çizilmiş yarış atı silüeti (sağa bakar)               */
 /* ------------------------------------------------------------------ */
 
 function Horse({ silk, number, running, won }) {
   return (
-    <svg className={`horse ${running ? 'running' : ''} ${won ? 'won' : ''}`} viewBox="0 0 76 52" width="68" height="46" aria-hidden="true">
+    <svg className={`horse ${running ? 'running' : ''} ${won ? 'won' : ''}`} viewBox="0 0 104 68" width="72" height="47" aria-hidden="true">
       <g className="horse-body-group">
-        <path d="M16 22 C8 20 5 28 8 35 C10 30 12 27 18 27 Z" fill="#1c140d" />
-        <rect className="leg leg-b1" x="21" y="29" width="3.4" height="18" rx="1.6" fill="#33251A" />
-        <rect className="leg leg-b2" x="27" y="30" width="3.4" height="17" rx="1.6" fill="#241A12" />
-        <rect className="leg leg-f1" x="44" y="30" width="3.4" height="17" rx="1.6" fill="#241A12" />
-        <rect className="leg leg-f2" x="50" y="29" width="3.4" height="18" rx="1.6" fill="#33251A" />
-        <ellipse cx="36" cy="26" rx="18" ry="9" fill="#43301F" />
-        <path d="M48 24 L58 8 L65 11 L68 16 L63 17 L55 30 Z" fill="#43301F" />
-        <path d="M58 8 L61 3 L63.5 9 Z" fill="#2c2014" />
-        <path d="M50 22 L59 9 L62 11 L53 25 Z" fill="#1c140d" />
-        <rect x="29" y="19" width="14" height="11" rx="2" fill={silk} />
-        <text x="36" y="27.5" textAnchor="middle" fontSize="9" fontWeight="800" fill="#fff" fontFamily="'Barlow Condensed', sans-serif">{number}</text>
-        <path d="M33 14 C33 10 41 10 41 14 L40 19 L34 19 Z" fill={silk} />
-        <circle cx="37" cy="9.5" r="3.6" fill="#E8C9A0" />
-        <path d="M33.2 8.5 A 4 4 0 0 1 40.8 8.5 L 41.5 9.5 L 32.5 9.5 Z" fill={silk} />
+        {/* kuyruk */}
+        <path d="M22 31 C11 31 6 43 8 55 C12 47 16 39 25 38 Z" fill="#3a2614" />
+        {/* uzak bacaklar (gövdenin arkasında, daha koyu) */}
+        <rect className="leg leg-b1" x="27" y="39" width="4" height="23" rx="2" fill="#4a3119" />
+        <rect className="leg leg-f1" x="64" y="39" width="4" height="23" rx="2" fill="#4a3119" />
+        {/* gövde: sağrı + karın + omuz (düz sırt çizgisi) */}
+        <ellipse cx="32" cy="33" rx="13" ry="12" fill="#6e4b2a" />
+        <ellipse cx="52" cy="35" rx="22" ry="10.5" fill="#6e4b2a" />
+        <ellipse cx="69" cy="34" rx="9.5" ry="11" fill="#6e4b2a" />
+        {/* boyun: öne-yukarı doğal açı */}
+        <path d="M66 25 L86 14 L90 20 L75 34 Z" fill="#6e4b2a" />
+        {/* baş + burun */}
+        <path d="M84 15 L94 11 L101 17 L99 22 L89 22 L85 19 Z" fill="#6e4b2a" />
+        {/* kulak */}
+        <path d="M89 13 L91 6 L94 13 Z" fill="#5e3f23" />
+        {/* yele */}
+        <path d="M66 24 L85 13 L87 16 L71 31 Z" fill="#3a2614" />
+        {/* göz + burun deliği */}
+        <circle cx="93" cy="16" r="1.2" fill="#160d05" />
+        <circle cx="98.5" cy="19" r="0.9" fill="#160d05" />
+        {/* yakın bacaklar (gövdenin önünde) */}
+        <rect className="leg leg-b2" x="31" y="39" width="4" height="22" rx="2" fill="#5f4126" />
+        <rect className="leg leg-f2" x="68" y="39" width="4" height="22" rx="2" fill="#5f4126" />
+        {/* eyer örtüsü + numara */}
+        <rect x="38" y="27" width="16" height="9.5" rx="2" fill={silk} />
+        <text x="46" y="34.6" textAnchor="middle" fontSize="8" fontWeight="800" fill="#fff" fontFamily="'Barlow Condensed', sans-serif">{number}</text>
+        {/* jokey */}
+        <path d="M50 30 C49 22 64 21 63 30 L60 31 L52 31 Z" fill={silk} />
+        <circle cx="62" cy="19" r="3.4" fill={silk} />
+        <circle cx="64.5" cy="21.5" r="2.3" fill="#E8C9A0" />
       </g>
     </svg>
   )
@@ -104,11 +106,8 @@ function Die({ mode, value, size = 'lg' }) {
   const pipColor = colored ? '#ffffff' : '#1b1b1b'
   const pips = value || 0
   const grid = {
-    1: [[1, 1]],
-    2: [[0, 0], [2, 2]],
-    3: [[0, 0], [1, 1], [2, 2]],
-    4: [[0, 0], [0, 2], [2, 0], [2, 2]],
-    5: [[0, 0], [0, 2], [1, 1], [2, 0], [2, 2]],
+    1: [[1, 1]], 2: [[0, 0], [2, 2]], 3: [[0, 0], [1, 1], [2, 2]],
+    4: [[0, 0], [0, 2], [2, 0], [2, 2]], 5: [[0, 0], [0, 2], [1, 1], [2, 0], [2, 2]],
     6: [[0, 0], [0, 2], [1, 0], [1, 2], [2, 0], [2, 2]],
   }
   return (
@@ -133,6 +132,7 @@ export default function App() {
   const [playMode, setPlayMode] = useState('manual')
   const [betType, setBetType] = useState('kazanan')
   const [theme, setTheme] = useState('grass')
+  const [muted, setMutedState] = useState(false)
   const [lineup, setLineup] = useState(() => pickLineup())
   const [selected, setSelected] = useState(null)
   const [bet, setBet] = useState(0)
@@ -153,7 +153,10 @@ export default function App() {
   useEffect(() => {
     if (phase !== 'countdown') return
     if (countdown <= 0) { startRace(); return }
-    const t = setTimeout(() => setCountdown((c) => c - 1), 1000)
+    const t = setTimeout(() => {
+      if (countdown <= 5) sfx.tick()
+      setCountdown((c) => c - 1)
+    }, 1000)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, countdown])
@@ -167,7 +170,6 @@ export default function App() {
 
   function settle(next) {
     if (!next.some((p) => p >= trackLen)) return
-    // bitiş anındaki konuma göre sıralama; eşitlikte rastgele (simetri korunur)
     const ord = next
       .map((p, i) => ({ p, i, r: Math.random() }))
       .sort((a, b) => b.p - a.p || b.r - a.r)
@@ -177,7 +179,12 @@ export default function App() {
     setWinner(win)
     setHistory((h) => [win, ...h].slice(0, 10))
     const placed = betType === 'kazanan' ? selected === win : ord[0] === selected || ord[1] === selected
-    if (placed) setBalance((b) => b + bet * payout)
+    if (placed) {
+      setBalance((b) => b + bet * payout)
+      sfx.win()
+    } else {
+      sfx.lose()
+    }
     setTimeout(() => setPhase('result'), 700)
   }
 
@@ -189,6 +196,7 @@ export default function App() {
     setTick((k) => k + 1)
     setRolling(true)
     setTimeout(() => setRolling(false), TICK_MS)
+    sfx.roll(selected !== null ? rolls[selected] : rolls[0])
     settle(next)
   }
 
@@ -199,6 +207,7 @@ export default function App() {
 
   function placeBet() {
     if (selected === null || bet <= 0 || bet > balance) return
+    sfx.bet()
     setBalance((b) => b - bet)
     setCountdown(BET_COUNTDOWN)
     setPhase('countdown')
@@ -207,6 +216,7 @@ export default function App() {
   function cancelBet() { setBalance((b) => b + bet); setPhase('betting') }
 
   function startRace() {
+    sfx.start()
     setPositions(Array(7).fill(0)); setLastRolls(Array(7).fill(null))
     setWinner(null); setOrder([]); setTick(0); setRolling(false); setPhase('racing')
   }
@@ -216,6 +226,13 @@ export default function App() {
     setPositions(Array(7).fill(0)); setLastRolls(Array(7).fill(null))
     setWinner(null); setOrder([]); setSelected(null); setBet(0); setPhase('betting')
     if (balance <= 0) setBalance(START_BALANCE)
+  }
+
+  function toggleSound() {
+    const m = !muted
+    setMutedState(m)
+    sfx.setMuted(m)
+    if (!m) sfx.unlock()
   }
 
   const winBet = betType === 'kazanan'
@@ -252,6 +269,13 @@ export default function App() {
                 {history.map((h, i) => (<span key={i} className="history-dot" style={{ background: SILKS[h] }}>{h + 1}</span>))}
               </div>
             )}
+            <button className={`icon-btn ${muted ? 'muted' : ''}`} onClick={toggleSound} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'} aria-pressed={!muted}>
+              {muted ? (
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor" /><path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor" /><path d="M15.5 8.5a5 5 0 010 7M18 6a8 8 0 010 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+              )}
+            </button>
             <div className="theme-toggle" role="group" aria-label="Pist zemini">
               <button className={theme === 'grass' ? 'active' : ''} onClick={() => setTheme('grass')}>Çim</button>
               <button className={theme === 'sand' ? 'active' : ''} onClick={() => setTheme('sand')}>Kum</button>
@@ -263,12 +287,7 @@ export default function App() {
           {lineup.map((h, i) => {
             const pct = Math.min(positions[i] / trackLen, 1)
             return (
-              <div
-                key={i}
-                className={`lane ${selected === i ? 'lane-mine' : ''} ${winner === i ? 'lane-winner' : ''} ${
-                  phase === 'result' && order[1] === i ? 'lane-place' : ''
-                }`}
-              >
+              <div key={i} className={`lane ${selected === i ? 'lane-mine' : ''} ${winner === i ? 'lane-winner' : ''} ${phase === 'result' && order[1] === i ? 'lane-place' : ''}`}>
                 <div className="lane-no" style={{ background: h.silk }}>{i + 1}</div>
                 <div className="lane-run">
                   <div className="lane-marks"><i /><i /><i /></div>
@@ -299,9 +318,7 @@ export default function App() {
               </div>
               {selected !== null && (
                 <div className="result-payline">
-                  {placedWin
-                    ? <>{winBet ? 'KAZANDINIZ' : 'PLASE!'} · <strong>+{fmt(bet * payout)}</strong></>
-                    : <>Atınız {lineup[selected].name} {myRank}. oldu · −{fmt(bet)}</>}
+                  {placedWin ? (<>{winBet ? 'KAZANDINIZ' : 'PLASE!'} · <strong>+{fmt(bet * payout)}</strong></>) : (<>Atınız {lineup[selected].name} {myRank}. oldu · −{fmt(bet)}</>)}
                 </div>
               )}
               <button className="btn btn-gold" onClick={newRound}>YENİ TUR</button>
@@ -311,15 +328,12 @@ export default function App() {
       </section>
 
       <div className="deck">
-        {/* AYARLAR */}
         <div className="card">
           <div className="card-title">AYARLAR</div>
           <div className="set-label">Zar Modu</div>
           <div className="seg">
             {Object.values(MODES).map((m) => (
-              <button key={m.key} className={modeKey === m.key ? 'active' : ''} disabled={!betting} onClick={() => setModeKey(m.key)}>
-                <b>{m.label}</b><small>{m.desc}</small>
-              </button>
+              <button key={m.key} className={modeKey === m.key ? 'active' : ''} disabled={!betting} onClick={() => setModeKey(m.key)}><b>{m.label}</b><small>{m.desc}</small></button>
             ))}
           </div>
           <div className="set-label">Oyun Şekli</div>
@@ -336,7 +350,6 @@ export default function App() {
           )}
         </div>
 
-        {/* AT SEÇİMİ */}
         <div className="card">
           <div className="card-title">ATINI SEÇ <span className="surface-tag">{theme === 'grass' ? 'ÇİM' : 'KUM'} ZEMİN</span></div>
           <div className="horse-list">
@@ -345,10 +358,7 @@ export default function App() {
                 <span className="silk" style={{ background: h.silk }}>{i + 1}</span>
                 <span className="hname">{h.name}</span>
                 {betting ? (
-                  <span className="form">
-                    <b className={theme === 'grass' ? 'on' : ''}>ÇİM {h.fg}</b>
-                    <b className={theme === 'sand' ? 'on' : ''}>KUM {h.fs}</b>
-                  </span>
+                  <span className="form"><b className={theme === 'grass' ? 'on' : ''}>ÇİM {h.fg}</b><b className={theme === 'sand' ? 'on' : ''}>KUM {h.fs}</b></span>
                 ) : (<span className="hsteps">{Math.min(positions[i], trackLen)}/{trackLen}</span>)}
               </button>
             ))}
@@ -356,18 +366,14 @@ export default function App() {
           <p className="form-note">Form değerleri bilgi amaçlıdır, sonucu etkilemez.</p>
         </div>
 
-        {/* BAHİS */}
         <div className="card card-bet">
           <div className="card-title">BAHİS <span className="odds-tag">ORAN {payout.toFixed(2)}x</span></div>
-
           {betting && (
             <>
               <div className="set-label">Bahis Türü</div>
               <div className="seg">
                 {Object.values(BET_TYPES).map((t) => (
-                  <button key={t.key} className={betType === t.key ? 'active' : ''} onClick={() => setBetType(t.key)}>
-                    <b>{t.label}</b><small>{t.hint} · {t.payout}x</small>
-                  </button>
+                  <button key={t.key} className={betType === t.key ? 'active' : ''} onClick={() => setBetType(t.key)}><b>{t.label}</b><small>{t.hint} · {t.payout}x</small></button>
                 ))}
               </div>
               <div className="chip-row">
@@ -383,7 +389,6 @@ export default function App() {
               </button>
             </>
           )}
-
           {phase === 'countdown' && (
             <div className="countdown-box">
               <div className="cd-ring"><span>{countdown}</span></div>
@@ -393,7 +398,6 @@ export default function App() {
               </div>
             </div>
           )}
-
           {phase === 'racing' && (
             <div className="race-box">
               {playMode === 'manual' ? (
