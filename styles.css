@@ -1,0 +1,509 @@
+/* ==================================================================
+   HİPODROM DERBY — gece hipodromu teması
+   Palet:
+   --turf      #0D1812  koyu çim (zemin)
+   --dirt      #15231B  pist şeridi
+   --line      #24382C  çizgiler
+   --ivory     #F3EDE0  fildişi (zar, yazı)
+   --gold      #E8B64C  pirinç/kupa altını (vurgu)
+   --blood     #E2484A  kırmızı (kayıp / kırmızı zar)
+   ================================================================== */
+
+:root {
+  --turf: #0d1812;
+  --dirt: #15231b;
+  --dirt-2: #19291f;
+  --line: #24382c;
+  --ivory: #f3ede0;
+  --ivory-dim: #b9b2a0;
+  --gold: #e8b64c;
+  --gold-deep: #c4922e;
+  --blood: #e2484a;
+  --green: #2ec27e;
+  --radius: 12px;
+  --display: 'Barlow Condensed', sans-serif;
+  --body: 'IBM Plex Sans', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+
+body {
+  background:
+    radial-gradient(1200px 500px at 50% -10%, #16271c 0%, transparent 60%),
+    var(--turf);
+  color: var(--ivory);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+button:disabled { cursor: not-allowed; opacity: 0.45; }
+button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 18px 20px 40px;
+}
+
+/* ---------------- üst bar ---------------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 2px 16px;
+}
+
+.brand { display: flex; align-items: center; gap: 12px; }
+
+.brand-flag {
+  width: 26px; height: 26px; border-radius: 5px;
+  background:
+    conic-gradient(#111 90deg, var(--ivory) 90deg 180deg, #111 180deg 270deg, var(--ivory) 270deg);
+  background-size: 50% 50%;
+  border: 1px solid var(--line);
+}
+
+.brand h1 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+
+.brand h1 em { font-style: normal; color: var(--gold); }
+
+.demo-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--turf);
+  background: var(--gold);
+  border-radius: 4px;
+  padding: 3px 7px;
+}
+
+.balance { text-align: right; }
+.balance-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--ivory-dim);
+}
+.balance-value {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- yerleşim ---------------- */
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 18px;
+  align-items: start;
+}
+
+/* ---------------- pist ---------------- */
+
+.track-panel {
+  position: relative;
+  background: linear-gradient(180deg, var(--dirt) 0%, var(--dirt-2) 100%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px 18px;
+  overflow: hidden;
+}
+
+.track-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  min-height: 26px;
+}
+
+.track-title {
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: 2px;
+  font-size: 16px;
+  color: var(--ivory);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--blood);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse { 50% { opacity: 0.3; } }
+
+.history { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+
+.history-dot {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--display);
+  font-weight: 700; font-size: 11px; color: #fff;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,.25);
+}
+
+.history-dot.big { width: 34px; height: 34px; font-size: 17px; }
+
+.track { display: flex; flex-direction: column; gap: 4px; }
+
+.lane {
+  display: grid;
+  grid-template-columns: 30px 1fr 14px;
+  align-items: stretch;
+  height: 58px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.12));
+  border: 1px solid transparent;
+  overflow: hidden;
+  transition: border-color .25s, box-shadow .25s;
+}
+
+.lane-mine { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.lane-winner { border-color: var(--green); box-shadow: 0 0 14px rgba(46,194,126,.35); }
+
+.lane-no {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display);
+  font-weight: 800; font-size: 16px; color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.4);
+}
+
+.lane-run { position: relative; }
+
+.lane-marks {
+  position: absolute; inset: 0;
+  display: flex;
+}
+.lane-marks i {
+  flex: 1;
+  border-right: 1px dashed rgba(243,237,224,.08);
+}
+
+.runner {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--p, 0) * (100% - 84px));
+  transform: translateY(-50%);
+  transition: left 0.72s cubic-bezier(.3,.7,.4,1);
+  width: 76px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .runner { transition: none; }
+  .horse * { animation: none !important; }
+}
+
+.roll-pop {
+  position: absolute;
+  top: -8px; right: -4px;
+  font-family: var(--display);
+  font-weight: 800; font-size: 12px;
+  border-radius: 4px;
+  padding: 1px 5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35);
+  animation: pop .7s ease both;
+}
+
+@keyframes pop {
+  0% { transform: translateY(6px) scale(.6); opacity: 0; }
+  30% { transform: translateY(0) scale(1.05); opacity: 1; }
+  100% { transform: translateY(-2px) scale(1); opacity: .95; }
+}
+
+.finish-strip {
+  background:
+    repeating-conic-gradient(#0c0c0c 0 25%, var(--ivory) 0 50%) 0 0 / 14px 14px;
+  opacity: .85;
+}
+
+/* ---- at animasyonu ---- */
+
+.horse { overflow: visible; display: block; }
+
+.horse .leg { transform-box: fill-box; transform-origin: 50% 0%; }
+
+.horse.running .leg-f1 { animation: swingA .38s ease-in-out infinite; }
+.horse.running .leg-f2 { animation: swingB .38s ease-in-out infinite; }
+.horse.running .leg-b1 { animation: swingB .38s ease-in-out infinite reverse; }
+.horse.running .leg-b2 { animation: swingA .38s ease-in-out infinite reverse; }
+.horse.running .horse-body-group { animation: bob .38s ease-in-out infinite; }
+.horse.won .horse-body-group { animation: bob .5s ease-in-out infinite; }
+
+@keyframes swingA { 0%,100% { transform: rotate(26deg); } 50% { transform: rotate(-22deg); } }
+@keyframes swingB { 0%,100% { transform: rotate(-26deg); } 50% { transform: rotate(22deg); } }
+@keyframes bob   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
+
+/* ---------------- sonuç ---------------- */
+
+.result-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(8, 14, 11, .72);
+  backdrop-filter: blur(3px);
+  animation: fadein .3s ease;
+}
+
+@keyframes fadein { from { opacity: 0; } }
+
+.result-card {
+  text-align: center;
+  background: var(--dirt);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 26px 40px 28px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.5);
+  animation: rise .35s cubic-bezier(.2,.9,.3,1.2) both;
+}
+
+.result-card.win { border-top-color: var(--green); }
+.result-card.lose { border-top-color: var(--blood); }
+
+@keyframes rise { from { transform: translateY(18px) scale(.96); opacity: 0; } }
+
+.result-eyebrow {
+  font-size: 10px; letter-spacing: 3px; color: var(--ivory-dim); margin-bottom: 10px;
+}
+
+.result-horse {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-family: var(--display);
+  font-weight: 800; font-size: 36px; letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.result-payline { color: var(--ivory-dim); margin-bottom: 18px; font-size: 14px; }
+.result-card.win .result-payline strong { color: var(--green); font-size: 17px; }
+
+/* ---------------- yan panel ---------------- */
+
+.side { display: flex; flex-direction: column; gap: 14px; }
+
+.card {
+  background: var(--dirt);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.card-title {
+  font-family: var(--display);
+  font-weight: 700; font-size: 15px; letter-spacing: 2px;
+  margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.odds-tag {
+  font-size: 11px; letter-spacing: 1px;
+  color: var(--gold);
+  border: 1px solid var(--gold-deep);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+/* zar modu */
+
+.mode-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.mode-btn {
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255,255,255,.02);
+  transition: border-color .2s, background .2s;
+  display: flex; flex-direction: column; gap: 4px;
+}
+
+.mode-btn.active { border-color: var(--gold); background: rgba(232,182,76,.08); }
+
+.mode-name { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: 1px; }
+.mode-desc { font-size: 11px; color: var(--ivory-dim); line-height: 1.35; }
+
+.mode-swatches { display: flex; gap: 4px; margin-top: 2px; }
+.mode-swatches i { width: 12px; height: 12px; border-radius: 3px; }
+
+.legend {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 11px; color: var(--ivory-dim);
+}
+.legend i {
+  display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+  margin-right: 4px; vertical-align: -1px;
+}
+
+/* at listesi */
+
+.horse-list { display: flex; flex-direction: column; gap: 5px; }
+
+.horse-row {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.02);
+  transition: border-color .2s, background .2s;
+  text-align: left;
+}
+
+.horse-row.active { border-color: var(--gold); background: rgba(232,182,76,.08); }
+.horse-row.leading .hname::after {
+  content: '●';
+  color: var(--green);
+  font-size: 9px;
+  margin-left: 6px;
+  vertical-align: 2px;
+}
+
+.silk {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-weight: 800; font-size: 12px; color: #fff;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,.25);
+}
+
+.hname { font-family: var(--display); font-weight: 600; letter-spacing: 1.5px; font-size: 16px; }
+
+.hsteps {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+.hsteps.dim { color: var(--ivory-dim); }
+
+/* bahis */
+
+.chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+
+.chip {
+  font-family: var(--display);
+  font-weight: 700; font-size: 14px; letter-spacing: .5px;
+  border: 1px dashed var(--gold-deep);
+  color: var(--gold);
+  border-radius: 999px;
+  padding: 6px 13px;
+  transition: background .15s;
+}
+.chip:not(:disabled):hover { background: rgba(232,182,76,.12); }
+.chip-clear { border-color: var(--line); color: var(--ivory-dim); }
+
+.bet-summary {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  margin-bottom: 12px;
+}
+.bet-summary > div {
+  background: rgba(0,0,0,.18);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.bs-label { display: block; font-size: 9px; letter-spacing: 1.5px; color: var(--ivory-dim); }
+.bs-value {
+  font-family: var(--display);
+  font-weight: 700; font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.bs-value.gold { color: var(--gold); }
+
+/* butonlar */
+
+.btn {
+  font-family: var(--display);
+  font-weight: 700; font-size: 16px; letter-spacing: 1.5px;
+  border-radius: 8px;
+  padding: 11px 18px;
+  transition: transform .1s, filter .15s;
+}
+.btn:not(:disabled):active { transform: translateY(1px); }
+
+.btn-gold {
+  background: linear-gradient(180deg, var(--gold), var(--gold-deep));
+  color: #241a08;
+  box-shadow: 0 4px 14px rgba(232,182,76,.25);
+}
+.btn-gold:not(:disabled):hover { filter: brightness(1.07); }
+
+.btn-ghost { border: 1px solid var(--line); color: var(--ivory-dim); }
+.btn-ghost:hover { border-color: var(--ivory-dim); color: var(--ivory); }
+
+.wide { width: 100%; }
+
+/* geri sayım */
+
+.countdown-box { display: flex; align-items: center; gap: 14px; }
+
+.cd-ring {
+  width: 58px; height: 58px; flex: none;
+  border-radius: 50%;
+  border: 3px solid var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-weight: 800; font-size: 24px;
+  color: var(--gold);
+  animation: pulse 1s infinite;
+}
+
+.cd-actions { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.cd-actions .btn { width: 100%; padding: 8px 12px; font-size: 14px; }
+
+/* oyuncunun zarı */
+
+.my-roll { display: flex; align-items: center; gap: 14px; }
+
+.die {
+  border-radius: 12px;
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,.18), 0 4px 12px rgba(0,0,0,.35);
+  display: flex; align-items: center; justify-content: center;
+  padding: 8px;
+  transition: background .25s;
+}
+.die-lg { width: 64px; height: 64px; flex: none; }
+.die.rolling { animation: dieroll .72s ease; }
+.die-q { font-family: var(--display); font-weight: 800; font-size: 26px; color: #1b1b1b; }
+
+@keyframes dieroll {
+  0% { transform: rotate(0) scale(.85); }
+  40% { transform: rotate(180deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.fineprint {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ivory-dim);
+  padding: 0 4px;
+}
+
+/* ---------------- mobil ---------------- */
+
+@media (max-width: 980px) {
+  .layout { grid-template-columns: 1fr; }
+  .app { padding: 12px 12px 32px; }
+  .brand h1 { font-size: 24px; }
+  .lane { height: 48px; }
+  .runner { width: 62px; }
+  .runner svg { width: 62px; height: 42px; }
+  .runner { left: calc(var(--p, 0) * (100% - 68px)); }
+  .result-card { padding: 20px 22px; margin: 0 12px; }
+  .result-horse { font-size: 28px; }
+}
