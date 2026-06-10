@@ -118,7 +118,7 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 .lane {
   display: grid; grid-template-columns: 28px 1fr 12px; align-items: stretch;
-  height: 50px; border-radius: 7px; overflow: hidden;
+  height: 50px; border-radius: 7px; overflow: visible;
   border: 1px solid transparent; transition: border-color .25s, box-shadow .25s;
 }
 
@@ -136,6 +136,7 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   display: flex; align-items: center; justify-content: center;
   font-family: var(--display); font-weight: 800; font-size: 15px; color: #fff;
   text-shadow: 0 1px 2px rgba(0,0,0,.4);
+  border-radius: 7px 0 0 7px;
 }
 
 .lane-run { position: relative; }
@@ -167,7 +168,7 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   100% { transform: translateY(-2px) scale(1); opacity: .95; }
 }
 
-.finish-strip { background: repeating-conic-gradient(#0c0c0c 0 25%, var(--ivory) 0 50%) 0 0 / 12px 12px; opacity: .85; }
+.finish-strip { background: repeating-conic-gradient(#0c0c0c 0 25%, var(--ivory) 0 50%) 0 0 / 12px 12px; opacity: .85; border-radius: 0 7px 7px 0; }
 
 /* ---- at animasyonu ---- */
 .horse { overflow: visible; display: block; }
