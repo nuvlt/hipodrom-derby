@@ -357,7 +357,7 @@ export default function App() {
         </div>
 
         {/* BAHİS */}
-        <div className="card">
+        <div className="card card-bet">
           <div className="card-title">BAHİS <span className="odds-tag">ORAN {payout.toFixed(2)}x</span></div>
 
           {betting && (
