@@ -70,27 +70,27 @@ function Horse({ silk, number, running, won }) {
         <ellipse cx="32" cy="33" rx="13" ry="12" fill="#6e4b2a" />
         <ellipse cx="52" cy="35" rx="22" ry="10.5" fill="#6e4b2a" />
         <ellipse cx="69" cy="34" rx="9.5" ry="11" fill="#6e4b2a" />
-        {/* boyun: öne-yukarı doğal açı */}
-        <path d="M66 25 L86 14 L90 20 L75 34 Z" fill="#6e4b2a" />
+        {/* boyun: kısa, öne-yukarı doğal açı */}
+        <path d="M65 25 L80 14 L84 20 L73 34 Z" fill="#6e4b2a" />
         {/* baş + burun */}
-        <path d="M84 15 L94 11 L101 17 L99 22 L89 22 L85 19 Z" fill="#6e4b2a" />
+        <path d="M78 14 L88 11 L94 16 L92 21 L83 21 L79 18 Z" fill="#6e4b2a" />
         {/* kulak */}
-        <path d="M89 13 L91 6 L94 13 Z" fill="#5e3f23" />
+        <path d="M84 12 L86 5 L89 12 Z" fill="#5e3f23" />
         {/* yele */}
-        <path d="M66 24 L85 13 L87 16 L71 31 Z" fill="#3a2614" />
+        <path d="M65 24 L79 13 L81 16 L70 30 Z" fill="#3a2614" />
         {/* göz + burun deliği */}
-        <circle cx="93" cy="16" r="1.2" fill="#160d05" />
-        <circle cx="98.5" cy="19" r="0.9" fill="#160d05" />
+        <circle cx="87" cy="15.5" r="1.2" fill="#160d05" />
+        <circle cx="91.5" cy="18" r="0.9" fill="#160d05" />
         {/* yakın bacaklar (gövdenin önünde) */}
         <rect className="leg leg-b2" x="31" y="39" width="4" height="22" rx="2" fill="#5f4126" />
         <rect className="leg leg-f2" x="68" y="39" width="4" height="22" rx="2" fill="#5f4126" />
         {/* eyer örtüsü + numara */}
-        <rect x="38" y="27" width="16" height="9.5" rx="2" fill={silk} />
-        <text x="46" y="34.6" textAnchor="middle" fontSize="8" fontWeight="800" fill="#fff" fontFamily="'Barlow Condensed', sans-serif">{number}</text>
-        {/* jokey */}
-        <path d="M50 30 C49 22 64 21 63 30 L60 31 L52 31 Z" fill={silk} />
-        <circle cx="62" cy="19" r="3.4" fill={silk} />
-        <circle cx="64.5" cy="21.5" r="2.3" fill="#E8C9A0" />
+        <rect x="35" y="27" width="15" height="9.5" rx="2" fill={silk} />
+        <text x="42.5" y="34.6" textAnchor="middle" fontSize="8" fontWeight="800" fill="#fff" fontFamily="'Barlow Condensed', sans-serif">{number}</text>
+        {/* jokey: öne eğik biniş pozisyonu */}
+        <path d="M47 30 C45 24 53 20 60 22 C63 23 62 27 58 28 L52 30 Z" fill={silk} />
+        <circle cx="60" cy="20" r="3" fill={silk} />
+        <circle cx="62.5" cy="21.5" r="2.1" fill="#E8C9A0" />
       </g>
     </svg>
   )
