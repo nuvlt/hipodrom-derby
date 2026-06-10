@@ -120,6 +120,7 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 .lane-mine { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
 .lane-winner { border-color: var(--green); box-shadow: 0 0 14px rgba(46,194,126,.4); }
+.lane-place { border-color: #c8cdd6; box-shadow: 0 0 0 1px #c8cdd6 inset; }
 
 .lane-no {
   display: flex; align-items: center; justify-content: center;
@@ -193,6 +194,12 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   display: flex; align-items: center; justify-content: center; gap: 10px;
   font-family: var(--display); font-weight: 800; font-size: 34px; letter-spacing: 2px; margin-bottom: 8px;
 }
+.podium { display: flex; gap: 14px; justify-content: center; margin-bottom: 14px; }
+.pod { font-family: var(--display); font-weight: 600; letter-spacing: 1px; font-size: 15px; color: var(--ivory-dim); }
+.pod b { margin-right: 4px; }
+.pod-1 b { color: var(--gold); }
+.pod-2 b { color: #c8cdd6; }
+
 .result-payline { color: var(--ivory-dim); margin-bottom: 18px; font-size: 14px; }
 .result-card.win .result-payline strong { color: var(--green); font-size: 17px; }
 
