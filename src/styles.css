@@ -104,6 +104,16 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 }
 .theme-toggle button.active { color: var(--turf); background: var(--gold); }
 
+.icon-btn {
+  width: 34px; height: 32px; flex: none;
+  border: 1px solid var(--line); border-radius: 8px;
+  color: var(--ivory-dim); background: rgba(255,255,255,.02);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: color .2s, border-color .2s;
+}
+.icon-btn:hover { color: var(--ivory); border-color: var(--ivory-dim); }
+.icon-btn.muted { color: var(--blood); border-color: rgba(226,72,74,.5); }
+
 .track { display: flex; flex-direction: column; gap: 3px; }
 
 .lane {
@@ -133,10 +143,10 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .lane-marks i { flex: 1; border-right: 1px dashed rgba(0,0,0,.16); }
 
 .runner {
-  position: absolute; top: 50%; left: calc(var(--p, 0) * (100% - 74px));
+  position: absolute; top: 50%; left: calc(var(--p, 0) * (100% - 80px));
   transform: translateY(-50%);
   transition: left 0.72s cubic-bezier(.3,.7,.4,1);
-  width: 68px;
+  width: 72px;
 }
 
 @media (prefers-reduced-motion: reduce) {
