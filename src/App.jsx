@@ -84,13 +84,14 @@ function Horse({ silk, number, running, won }) {
         {/* yakın bacaklar (gövdenin önünde) */}
         <rect className="leg leg-b2" x="31" y="39" width="4" height="22" rx="2" fill="#5f4126" />
         <rect className="leg leg-f2" x="68" y="39" width="4" height="22" rx="2" fill="#5f4126" />
-        {/* eyer örtüsü + numara */}
-        <rect x="35" y="27" width="15" height="9.5" rx="2" fill={silk} />
-        <text x="42.5" y="34.6" textAnchor="middle" fontSize="8" fontWeight="800" fill="#fff" fontFamily="'Barlow Condensed', sans-serif">{number}</text>
+        {/* eyer örtüsü */}
+        <rect x="46" y="29" width="14" height="9" rx="2" fill={silk} />
         {/* jokey: dik biniş pozisyonu */}
         <path d="M50 30 C49 22 52 18 55 19 C58 20 56 26 56 30 Z" fill={silk} />
         <circle cx="53.5" cy="15" r="3" fill={silk} />
         <circle cx="55.5" cy="17.5" r="2" fill="#E8C9A0" />
+        {/* numara — jokeyin altında */}
+        <text x="53" y="36.2" textAnchor="middle" fontSize="8" fontWeight="800" fill="#fff" fontFamily="'Barlow Condensed', sans-serif">{number}</text>
       </g>
     </svg>
   )
@@ -196,7 +197,7 @@ export default function App() {
     setTick((k) => k + 1)
     setRolling(true)
     setTimeout(() => setRolling(false), TICK_MS)
-    sfx.roll(selected !== null ? rolls[selected] : rolls[0])
+    sfx.hoof()
     settle(next)
   }
 
