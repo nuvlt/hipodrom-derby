@@ -87,10 +87,10 @@ function Horse({ silk, number, running, won }) {
         {/* eyer örtüsü + numara */}
         <rect x="35" y="27" width="15" height="9.5" rx="2" fill={silk} />
         <text x="42.5" y="34.6" textAnchor="middle" fontSize="8" fontWeight="800" fill="#fff" fontFamily="'Barlow Condensed', sans-serif">{number}</text>
-        {/* jokey: öne eğik biniş pozisyonu */}
-        <path d="M47 30 C45 24 53 20 60 22 C63 23 62 27 58 28 L52 30 Z" fill={silk} />
-        <circle cx="60" cy="20" r="3" fill={silk} />
-        <circle cx="62.5" cy="21.5" r="2.1" fill="#E8C9A0" />
+        {/* jokey: dik biniş pozisyonu */}
+        <path d="M50 30 C49 22 52 18 55 19 C58 20 56 26 56 30 Z" fill={silk} />
+        <circle cx="53.5" cy="15" r="3" fill={silk} />
+        <circle cx="55.5" cy="17.5" r="2" fill="#E8C9A0" />
       </g>
     </svg>
   )
