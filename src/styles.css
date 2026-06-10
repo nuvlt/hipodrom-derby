@@ -335,6 +335,7 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 /* ---------------- mobil ---------------- */
 @media (max-width: 980px) {
   .deck { grid-template-columns: 1fr; }
+  .deck .card-bet { order: -1; } /* mobilde bahis + zar pistin hemen altında */
   .app { padding: 12px 12px 28px; }
   .brand h1 { font-size: 23px; }
 }
