@@ -385,3 +385,153 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .app { padding: 12px 12px 28px; }
   .brand h1 { font-size: 23px; }
 }
+
+/* ==================================================================
+   ÜST GEÇİŞ (Tekli Yarış / 6'lı Ganyan)
+   ================================================================== */
+.mode-tabs {
+  max-width: 1180px; margin: 0 auto; padding: 14px 18px 0;
+  display: flex; gap: 8px;
+}
+.mode-tabs button {
+  font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: 1.5px;
+  padding: 9px 20px; border-radius: 9px 9px 0 0;
+  color: var(--ivory-dim); background: rgba(255,255,255,.03);
+  border: 1px solid var(--line); border-bottom: none;
+}
+.mode-tabs button.active { color: var(--turf); background: var(--gold); border-color: var(--gold); }
+
+.demo-badge.gan { background: var(--green); }
+
+/* ==================================================================
+   6'LI GANYAN
+   ================================================================== */
+
+/* üst form çarkı barı */
+.gan-bar {
+  background: var(--dirt); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.gan-bar-left { display: flex; align-items: center; gap: 12px; }
+.gan-bar-title { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: 1.5px; }
+.gan-bar-sub { font-size: 11px; color: var(--ivory-dim); }
+.gan-bar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gan-mode { width: auto; margin: 0; }
+.gan-mode button { padding: 7px 11px; }
+.gan-mode button small { display: none; }
+
+.form-wheel-wrap { position: relative; width: 44px; height: 44px; flex: none; }
+.form-wheel {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: conic-gradient(#2EC27E 0 120deg, #E8B64C 120deg 240deg, #E2484A 240deg 360deg);
+  border: 2px solid var(--line); box-shadow: inset 0 0 6px rgba(0,0,0,.5);
+}
+.form-wheel.spin { animation: wheelspin 1.7s cubic-bezier(.2,.7,.2,1); }
+@keyframes wheelspin { 0% { transform: rotate(0); } 100% { transform: rotate(1480deg); } }
+.form-wheel-pin {
+  position: absolute; top: -3px; left: 50%; transform: translateX(-50%);
+  width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-top: 8px solid var(--gold);
+}
+
+/* ayak kartları */
+.legs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.leg-card { background: var(--dirt); border: 1px solid var(--line); border-radius: var(--radius); padding: 11px; }
+.leg-card.picked { border-color: var(--gold); }
+.leg-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 9px; }
+.leg-no { font-family: var(--display); font-weight: 800; font-size: 13px; letter-spacing: 1px; color: var(--gold); }
+.leg-name { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: .5px; flex: 1; }
+.leg-dist { font-size: 11px; color: var(--ivory-dim); }
+
+.gan-horses { display: flex; flex-direction: column; gap: 4px; }
+.gan-horse {
+  display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 9px;
+  padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px;
+  background: rgba(255,255,255,.02); text-align: left; transition: border-color .15s, background .15s;
+}
+.gan-horse:not(:disabled):hover { border-color: var(--ivory-dim); }
+.gan-horse.sel { border-color: var(--gold); background: rgba(232,182,76,.08); }
+.gan-horse:disabled { opacity: .55; }
+.gh-main { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gh-top { display: flex; align-items: center; gap: 7px; }
+.gh-top .hname { font-family: var(--display); font-weight: 600; letter-spacing: 1px; font-size: 15px; }
+.form-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: .5px; padding: 1px 6px; border-radius: 999px;
+  color: var(--fc); border: 1px solid var(--fc); background: color-mix(in srgb, var(--fc) 12%, transparent);
+}
+.gh-stats { font-size: 10px; color: var(--ivory-dim); font-variant-numeric: tabular-nums; }
+.gh-check { font-size: 16px; color: var(--gold); font-weight: 800; }
+
+/* kalan mesafe çubuğu */
+.rem-bar { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 0 2px; }
+.rem-track { flex: 1; height: 7px; border-radius: 4px; background: rgba(0,0,0,.3); overflow: hidden; }
+.rem-fill { height: 100%; background: linear-gradient(90deg, var(--gold-deep), var(--gold)); transition: width .6s linear; }
+.rem-bar b { font-family: var(--display); font-size: 15px; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* anlık devam rozeti */
+.alive-pill {
+  font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: 1px;
+  color: var(--green); border: 1px solid var(--green); border-radius: 6px; padding: 4px 10px;
+}
+
+/* ayaklar arası ekran */
+.gap-screen { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 40px 16px; }
+.gap-title { font-family: var(--display); font-weight: 800; font-size: 24px; letter-spacing: 1px; }
+.gap-sub { color: var(--ivory-dim); font-size: 13px; }
+
+/* kupon takip şeridi */
+.coupon-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 14px; }
+.coupon-leg {
+  display: flex; align-items: center; gap: 6px; padding: 8px 9px;
+  background: var(--dirt); border: 1px solid var(--line); border-radius: 9px;
+}
+.coupon-leg.live { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.coupon-leg.ok { border-color: var(--green); }
+.coupon-leg.fail { border-color: var(--blood); opacity: .7; }
+.cl-no { font-family: var(--display); font-weight: 800; font-size: 11px; color: var(--ivory-dim); }
+.cl-silk { width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 800; font-size: 10px; color: #fff; flex: none; }
+.cl-name { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .5px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-state { font-weight: 800; font-size: 14px; }
+.coupon-leg.ok .cl-state { color: var(--green); }
+.coupon-leg.fail .cl-state { color: var(--blood); }
+.coupon-leg.live .cl-state { color: var(--gold); }
+.coupon-leg.wait .cl-state { color: var(--ivory-dim); }
+
+/* sonuç ekranı */
+.gan-result-panel { display: flex; justify-content: center; }
+.gan-result { text-align: center; max-width: 560px; width: 100%; padding: 18px 10px 6px; }
+.gan-score { font-family: var(--display); font-weight: 800; font-size: 64px; line-height: 1; color: var(--gold); }
+.gan-score span { font-size: 22px; color: var(--ivory); margin-left: 6px; }
+.gan-result.lose .gan-score { color: var(--ivory-dim); }
+.gan-result.perfect .gan-score { color: var(--green); }
+.gan-points { font-family: var(--display); font-weight: 700; font-size: 20px; margin-top: 8px; }
+.gan-points em { font-style: normal; color: var(--green); }
+.gan-best { font-size: 12px; color: var(--ivory-dim); margin: 6px 0 16px; }
+
+.recap { display: flex; flex-direction: column; gap: 5px; margin-bottom: 18px; text-align: left; }
+.recap-row {
+  display: grid; grid-template-columns: 28px 1fr auto auto auto auto; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 8px; background: rgba(255,255,255,.02); border: 1px solid var(--line);
+  font-size: 13px;
+}
+.recap-row.ok { border-color: rgba(46,194,126,.4); }
+.recap-row.fail { border-color: rgba(226,72,74,.35); }
+.rr-leg { font-family: var(--display); font-weight: 800; color: var(--ivory-dim); }
+.rr-name { font-family: var(--display); font-weight: 600; letter-spacing: .5px; }
+.rr-pick { display: flex; align-items: center; gap: 5px; font-family: var(--display); font-weight: 600; }
+.rr-pick .silk { width: 17px; height: 17px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; color: #fff; font-style: normal; }
+.rr-arrow { color: var(--ivory-dim); }
+.rr-win { font-family: var(--display); font-weight: 600; color: var(--gold); }
+.rr-mark { font-weight: 800; }
+.recap-row.ok .rr-mark { color: var(--green); }
+.recap-row.fail .rr-mark { color: var(--blood); }
+
+@media (max-width: 760px) {
+  .legs { grid-template-columns: 1fr; }
+  .coupon-strip { grid-template-columns: repeat(3, 1fr); }
+  .gan-score { font-size: 52px; }
+  .recap-row { grid-template-columns: 24px 1fr auto auto; }
+  .recap-row .rr-arrow, .recap-row .rr-win { display: none; }
+}
+.alive-pill.dead { color: var(--ivory-dim); border-color: var(--line); }
