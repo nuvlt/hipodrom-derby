@@ -66,6 +66,7 @@ export default function Ganyan() {
   const [revealed, setRevealed] = useState(false)
   const [spinning, setSpinning] = useState(false)
   const [picks, setPicks] = useState(Array(LEGS).fill(null))
+  const [activeLeg, setActiveLeg] = useState(0)
   const [legIndex, setLegIndex] = useState(0)
   const [between, setBetween] = useState(false)
   const [gap, setGap] = useState(GAP_SEC)
@@ -99,6 +100,7 @@ export default function Ganyan() {
     if (stage !== 'coupon' || !revealed) return
     sfx.tick()
     setPicks((p) => { const n = [...p]; n[leg] = idx; return n })
+    if (leg < LEGS - 1) setTimeout(() => setActiveLeg(leg + 1), 260)
   }
 
   function playCoupon() {
@@ -123,6 +125,7 @@ export default function Ganyan() {
     setCoupon(buildCoupon())
     setRevealed(false); setSpinning(false)
     setPicks(Array(LEGS).fill(null))
+    setActiveLeg(0)
     setLegIndex(0); setBetween(false); setGap(GAP_SEC); setResults([])
     setStage('coupon')
   }
@@ -200,11 +203,28 @@ export default function Ganyan() {
             </div>
           </div>
 
-          <div className="legs">
+          <div className="leg-tabs" role="tablist">
             {coupon.map((leg, li) => (
-              <div key={li} className={`leg-card ${picks[li] !== null ? 'picked' : ''}`}>
+              <button
+                key={li}
+                role="tab"
+                aria-selected={activeLeg === li}
+                className={`leg-tab ${activeLeg === li ? 'active' : ''} ${picks[li] !== null ? 'done' : ''}`}
+                onClick={() => setActiveLeg(li)}
+              >
+                <span className="lt-label">AYAK {li + 1}</span>
+                <span className="lt-mark">{picks[li] !== null ? '✓' : '·'}</span>
+              </button>
+            ))}
+          </div>
+
+          {(() => {
+            const li = activeLeg
+            const leg = coupon[li]
+            return (
+              <div className={`leg-card solo ${picks[li] !== null ? 'picked' : ''}`}>
                 <div className="leg-head">
-                  <span className="leg-no">AYAK {li + 1}</span>
+                  <span className="leg-no">AYAK {li + 1}/{LEGS}</span>
                   <span className="leg-name">{leg.name}</span>
                   <span className="leg-dist">{leg.dist}</span>
                 </div>
@@ -224,8 +244,8 @@ export default function Ganyan() {
                   ))}
                 </div>
               </div>
-            ))}
-          </div>
+            )
+          })()}
           <p className="fineprint">İstatistikler ve form göstergeleri bilgi amaçlıdır, sonucu etkilemez · 7 at, her ayakta eşit şans (1/7) · Demo.</p>
         </>
       )}
