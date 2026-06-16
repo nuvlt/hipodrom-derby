@@ -590,3 +590,52 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   font-style: normal; font-size: 8px; font-weight: 800; letter-spacing: .5px; margin-left: 5px;
   color: var(--turf); background: var(--gold); padding: 1px 4px; border-radius: 999px;
 }
+
+/* ==================================================================
+   ONLINE PROTOTİP (Faz 1.8 — botlarla)
+   ================================================================== */
+
+/* kimlik çipi */
+.id-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .5px;
+  padding: 6px 11px; border-radius: 999px; color: var(--ivory);
+  background: var(--dirt); border: 1px solid var(--line);
+}
+.id-chip:hover { border-color: var(--gold); }
+.id-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+.id-edit { color: var(--ivory-dim); font-size: 11px; }
+
+/* katılımcı / canlı sayaç */
+.alive-pill.players { color: var(--ivory); border-color: var(--line); }
+
+/* kupon kartı seçim yüzdesi */
+.gh-share { font-size: 10px; color: var(--gold); font-weight: 600; }
+
+/* ara ekran eleme bildirimi */
+.gap-elim { margin-top: 8px; font-size: 13px; color: var(--ivory-dim); }
+.gap-elim b { color: var(--blood); font-family: var(--display); font-size: 15px; }
+
+/* sıralama satırı */
+.gan-rank { font-family: var(--display); font-weight: 700; font-size: 17px; margin-top: 6px; }
+.gan-rank b { color: var(--gold); }
+
+/* liderlik tablosu */
+.leaderboard {
+  max-width: 460px; margin: 4px auto 18px; text-align: left;
+  background: var(--dirt); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px;
+}
+.lb-title { font-family: var(--display); font-weight: 700; font-size: 12px; letter-spacing: 1.5px; color: var(--ivory-dim); margin-bottom: 8px; }
+.lb-row { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 7px; font-size: 14px; }
+.lb-row:nth-child(even) { background: rgba(255,255,255,.02); }
+.lb-row.me { background: rgba(232,182,76,.12); border: 1px solid var(--gold); }
+.lb-row.lb-sep { margin-top: 6px; }
+.lb-rank { font-family: var(--display); font-weight: 800; color: var(--ivory-dim); text-align: center; }
+.lb-row.me .lb-rank { color: var(--gold); }
+.lb-nick { font-family: var(--display); font-weight: 600; letter-spacing: .5px; display: flex; align-items: center; gap: 6px; }
+.lb-nick em { font-style: normal; font-size: 8px; font-weight: 800; background: var(--gold); color: var(--turf); padding: 1px 5px; border-radius: 999px; }
+.lb-pts { font-family: var(--display); font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 760px) {
+  .id-chip { font-size: 11px; padding: 5px 8px; }
+}
