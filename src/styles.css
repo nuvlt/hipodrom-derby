@@ -535,3 +535,27 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .recap-row .rr-arrow, .recap-row .rr-win { display: none; }
 }
 .alive-pill.dead { color: var(--ivory-dim); border-color: var(--line); }
+
+/* ayak tab'leri (kupon kurma) */
+.leg-tabs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-bottom: 12px; }
+.leg-tab {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 4px; border-radius: 9px;
+  background: var(--dirt); border: 1px solid var(--line);
+  transition: border-color .15s, background .15s;
+}
+.leg-tab:hover { border-color: var(--ivory-dim); }
+.leg-tab.active { border-color: var(--gold); background: rgba(232,182,76,.1); }
+.leg-tab.done .lt-mark { color: var(--green); }
+.lt-label { font-family: var(--display); font-weight: 700; font-size: 12px; letter-spacing: .5px; color: var(--ivory-dim); }
+.leg-tab.active .lt-label { color: var(--ivory); }
+.lt-mark { font-weight: 800; font-size: 13px; color: var(--ivory-dim); line-height: 1; }
+
+.leg-card.solo { max-width: 640px; margin: 0 auto; }
+.leg-card.solo .leg-name { font-size: 19px; }
+
+@media (max-width: 760px) {
+  .leg-tabs { gap: 4px; }
+  .leg-tab { padding: 7px 2px; }
+  .lt-label { font-size: 10px; letter-spacing: 0; }
+}
