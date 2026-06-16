@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import * as sfx from './sound'
 import {
   MODES, BET_TYPES, STEP_NAMES, SILKS, CHIPS, STEP_COLORS, TICK_MS,
-  fmt, pickLineup, Die, BallBoard, RaceTrack,
+  fmt, pickLineup, buildField, weightedPick, Die, BallBoard, RaceTrack,
 } from './game'
 
 const BET_COUNTDOWN = 10
@@ -27,11 +27,21 @@ export default function SingleRace() {
   const [history, setHistory] = useState([])
   const [tick, setTick] = useState(0)
   const [rolling, setRolling] = useState(false)
+  const [lockedOdds, setLockedOdds] = useState(0)
 
   const mode = MODES[modeKey]
   const trackLen = mode.track
   const betting = phase === 'betting'
-  const payout = BET_TYPES[betType].payout
+
+  // her atın gerçek oranı: zemin (çim/kum form) + mod -> Monte Carlo
+  const field = useMemo(() => {
+    const ratings = lineup.map((h) => (theme === 'grass' ? h.fg : h.fs))
+    return buildField(ratings, MODES[modeKey])
+  }, [lineup, modeKey, theme])
+
+  const payout = selected !== null
+    ? (betType === 'kazanan' ? field.oddsWin[selected] : field.oddsPlase[selected])
+    : null
 
   useEffect(() => {
     if (phase !== 'countdown') return
@@ -63,7 +73,7 @@ export default function SingleRace() {
     setHistory((h) => [win, ...h].slice(0, 10))
     const placed = betType === 'kazanan' ? selected === win : ord[0] === selected || ord[1] === selected
     if (placed) {
-      setBalance((b) => b + bet * payout)
+      setBalance((b) => b + bet * lockedOdds)
       sfx.win()
     } else {
       sfx.lose()
@@ -72,7 +82,7 @@ export default function SingleRace() {
   }
 
   function step() {
-    const rolls = lineup.map(() => MODES[modeKey].faces[Math.floor(Math.random() * MODES[modeKey].faces.length)])
+    const rolls = lineup.map((_, i) => weightedPick(MODES[modeKey].faces, field.weights[i]))
     const next = positions.map((p, i) => p + rolls[i])
     setLastRolls(rolls)
     setPositions(next)
@@ -91,6 +101,7 @@ export default function SingleRace() {
   function placeBet() {
     if (selected === null || bet <= 0 || bet > balance) return
     sfx.bet()
+    setLockedOdds(payout)
     setBalance((b) => b - bet)
     setCountdown(BET_COUNTDOWN)
     setPhase('countdown')
@@ -187,7 +198,7 @@ export default function SingleRace() {
               </div>
               {selected !== null && (
                 <div className="result-payline">
-                  {placedWin ? (<>{winBet ? 'KAZANDINIZ' : 'PLASE!'} · <strong>+{fmt(bet * payout)}</strong></>) : (<>Atınız {lineup[selected].name} {myRank}. oldu · −{fmt(bet)}</>)}
+                  {placedWin ? (<>{winBet ? 'KAZANDINIZ' : 'PLASE!'} · <strong>+{fmt(bet * lockedOdds)}</strong></>) : (<>Atınız {lineup[selected].name} {myRank}. oldu · −{fmt(bet)}</>)}
                 </div>
               )}
               <button className="btn btn-gold" onClick={newRound}>YENİ TUR</button>
@@ -225,24 +236,27 @@ export default function SingleRace() {
             {lineup.map((h, i) => (
               <button key={i} className={`horse-row ${selected === i ? 'active' : ''} ${leaderIdx === i && phase === 'racing' ? 'leading' : ''}`} disabled={!betting} onClick={() => betting && setSelected(i)}>
                 <span className="silk" style={{ background: h.silk }}>{i + 1}</span>
-                <span className="hname">{h.name}</span>
+                <span className="hcol">
+                  <span className="hname">{h.name}{field.donkeyIdx === i && <em className="donkey-tag" title="En düşük şanslı at — en yüksek oran">EŞEK AT</em>}</span>
+                  <span className="hform2"><b className={theme === 'grass' ? 'on' : ''}>ÇİM {h.fg}</b><b className={theme === 'sand' ? 'on' : ''}>KUM {h.fs}</b></span>
+                </span>
                 {betting ? (
-                  <span className="form"><b className={theme === 'grass' ? 'on' : ''}>ÇİM {h.fg}</b><b className={theme === 'sand' ? 'on' : ''}>KUM {h.fs}</b></span>
+                  <span className="row-odds">{field.oddsWin[i].toFixed(2)}<small>x</small></span>
                 ) : (<span className="hsteps">{Math.min(positions[i], trackLen)}/{trackLen}</span>)}
               </button>
             ))}
           </div>
-          <p className="form-note">Form değerleri bilgi amaçlıdır, sonucu etkilemez.</p>
+          <p className="form-note">Oranlar her atın gerçek kazanma şansını yansıtır; zemin ve form bunu etkiler.</p>
         </div>
 
         <div className="card card-bet">
-          <div className="card-title">BAHİS <span className="odds-tag">ORAN {payout.toFixed(2)}x</span></div>
+          <div className="card-title">BAHİS <span className="odds-tag">ORAN {payout ? payout.toFixed(2) : '—'}x</span></div>
           {betting && (
             <>
               <div className="set-label">Bahis Türü</div>
               <div className="seg">
                 {Object.values(BET_TYPES).map((t) => (
-                  <button key={t.key} className={betType === t.key ? 'active' : ''} onClick={() => setBetType(t.key)}><b>{t.label}</b><small>{t.hint} · {t.payout}x</small></button>
+                  <button key={t.key} className={betType === t.key ? 'active' : ''} onClick={() => setBetType(t.key)}><b>{t.label}</b><small>{t.hint}{selected !== null ? ` · ${(t.key === 'kazanan' ? field.oddsWin[selected] : field.oddsPlase[selected]).toFixed(2)}x` : ''}</small></button>
                 ))}
               </div>
               <div className="chip-row">
@@ -251,10 +265,10 @@ export default function SingleRace() {
               </div>
               <div className="bet-summary">
                 <div><span className="bs-label">BAHİS</span><span className="bs-value">{fmt(bet)}</span></div>
-                <div><span className="bs-label">OLASI KAZANÇ</span><span className="bs-value gold">{fmt(bet * payout)}</span></div>
+                <div><span className="bs-label">OLASI KAZANÇ</span><span className="bs-value gold">{fmt(bet * (payout || 0))}</span></div>
               </div>
               <button className="btn btn-gold wide" disabled={selected === null || bet <= 0 || bet > balance} onClick={placeBet}>
-                {selected === null ? 'ÖNCE AT SEÇ' : bet <= 0 ? 'BAHİS MİKTARI SEÇ' : `${lineup[selected].name} · ${BET_TYPES[betType].label.toUpperCase()}`}
+                {selected === null ? 'ÖNCE AT SEÇ' : bet <= 0 ? 'BAHİS MİKTARI SEÇ' : `${lineup[selected].name} · ${payout.toFixed(2)}x`}
               </button>
             </>
           )}
@@ -292,8 +306,8 @@ export default function SingleRace() {
       </div>
 
       <p className="fineprint">
-        7 at · Kazanan 1/7 → 6.50x · Plase ilk 2 → 3.25x · İkisinde de teorik RTP %92.9 ·
-        Form göstergeleri ve pist zemini sonucu etkilemez · Demo kredisi gerçek para değildir.
+        7 at · Her atın oranı gerçek kazanma şansına göre belirlenir (zemin ve form etkiler) ·
+        Tüm bahislerde teorik RTP %92.9 · Eşek at: en düşük şanslı at, en yüksek oran · Demo kredisi gerçek para değildir.
       </p>
     </div>
   )
