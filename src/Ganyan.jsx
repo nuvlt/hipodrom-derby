@@ -1,11 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import * as sfx from './sound'
 import {
-  MODES, TICK_MS, rollFace, rankOrder, pickGanyanLineup, pickNames, DISTANCES, RaceTrack,
+  MODES, TICK_MS, rollFace, rankOrder, pickGanyanLineup, pickNames, DISTANCES,
+  buildField, weightedPick, RaceTrack,
 } from './game'
 
 const LEGS = 6
 const GAP_SEC = 5 // ayaklar arası bekleme (çok oyuncuda 30 sn olacak)
+const DONKEY_BONUS = 150 // eşek at tutturma bonusu (puan)
+
+/* ayağın ratingleri: genel + form durumu (form artık sonucu etkiler) */
+function legRatings(leg) {
+  return leg.lineup.map((h) => h.genel + (h.form.key === 'formda' ? 4 : h.form.key === 'yukselen' ? 2 : -3))
+}
 
 function buildCoupon() {
   const names = pickNames(LEGS)
@@ -13,7 +20,7 @@ function buildCoupon() {
 }
 
 /* tek bir ayağı otomatik koşturur, bitince onFinish(sıralama) çağırır */
-function RaceRunner({ lineup, mode, theme, mineIdx, onFinish }) {
+function RaceRunner({ lineup, mode, theme, mineIdx, weights, onFinish }) {
   const [positions, setPositions] = useState(Array(7).fill(0))
   const [lastRolls, setLastRolls] = useState(Array(7).fill(null))
   const [tick, setTick] = useState(0)
@@ -24,7 +31,7 @@ function RaceRunner({ lineup, mode, theme, mineIdx, onFinish }) {
   useEffect(() => {
     if (done) return
     const t = setTimeout(() => {
-      const rolls = lineup.map(() => rollFace(mode.faces))
+      const rolls = lineup.map((_, i) => weightedPick(mode.faces, weights[i]))
       const next = positions.map((p, i) => p + rolls[i])
       setLastRolls(rolls); setPositions(next); setTick((k) => k + 1)
       sfx.hoof()
@@ -76,6 +83,9 @@ export default function Ganyan() {
   const mode = MODES[modeKey]
   const allPicked = picks.every((p) => p !== null)
 
+  // her ayağın oranları: genel + form -> Monte Carlo (mod değişince yeniden hesaplanır)
+  const fields = useMemo(() => coupon.map((leg) => buildField(legRatings(leg), MODES[modeKey])), [coupon, modeKey])
+
   /* ayaklar arası geri sayım */
   useEffect(() => {
     if (stage !== 'racing' || !between) return
@@ -111,8 +121,9 @@ export default function Ganyan() {
 
   function onLegFinish(order) {
     const correct = order[0] === picks[legIndex]
+    const donkey = correct && picks[legIndex] === fields[legIndex].donkeyIdx
     if (correct) sfx.win(); else sfx.lose()
-    setResults((r) => [...r, { winner: order[0], correct }])
+    setResults((r) => [...r, { winner: order[0], correct, donkey }])
     setBetween(true)
     setGap(GAP_SEC)
   }
@@ -137,10 +148,11 @@ export default function Ganyan() {
 
   /* skorlama */
   const correctCount = results.filter((r) => r.correct).length
+  const donkeyHits = results.filter((r) => r.donkey).length
   let aliveStreak = 0
   for (const r of results) { if (r.correct) aliveStreak++; else break }
   const perfect = correctCount === LEGS && results.length === LEGS
-  const points = correctCount * 100 + aliveStreak * 50 + (perfect ? 1000 : 0)
+  const points = correctCount * 100 + aliveStreak * 50 + donkeyHits * DONKEY_BONUS + (perfect ? 1000 : 0)
 
   useEffect(() => {
     if (stage === 'result' && points > best) setBest(points)
@@ -239,6 +251,12 @@ export default function Ganyan() {
                         </span>
                         <span className="gh-stats">HIZ {h.hiz} · GÜÇ {h.guc} · {h.kilo}KG · GENEL {h.genel}</span>
                       </span>
+                      {revealed && (
+                        <span className="gh-odds">
+                          <b>{fields[li].oddsWin[hi].toFixed(2)}<small>x</small></b>
+                          {fields[li].donkeyIdx === hi && <em className="donkey-tag">EŞEK</em>}
+                        </span>
+                      )}
                       {picks[li] === hi && <span className="gh-check">✓</span>}
                     </button>
                   ))}
@@ -246,7 +264,7 @@ export default function Ganyan() {
               </div>
             )
           })()}
-          <p className="fineprint">İstatistikler ve form göstergeleri bilgi amaçlıdır, sonucu etkilemez · 7 at, her ayakta eşit şans (1/7) · Demo.</p>
+          <p className="fineprint">İstatistikler ve form atın kazanma şansını (oranını) belirler · Eşek at: en düşük şanslı at — tutturursan +{DONKEY_BONUS} bonus puan · Demo.</p>
         </>
       )}
 
@@ -266,7 +284,7 @@ export default function Ganyan() {
             </div>
 
             {!between ? (
-              <RaceRunner key={legIndex} lineup={coupon[legIndex].lineup} mode={mode} theme={theme} mineIdx={picks[legIndex]} onFinish={onLegFinish} />
+              <RaceRunner key={legIndex} lineup={coupon[legIndex].lineup} mode={mode} theme={theme} mineIdx={picks[legIndex]} weights={fields[legIndex].weights} onFinish={onLegFinish} />
             ) : (
               <div className="gap-screen">
                 <div className="cd-ring"><span>{gap}</span></div>
@@ -305,6 +323,7 @@ export default function Ganyan() {
             <div className="result-eyebrow">ETAP SONUCU</div>
             <div className="gan-score">{correctCount}<span>/6 DOĞRU</span></div>
             <div className="gan-points">+{points} PUAN {perfect && <em>· TAM KUPON BONUSU!</em>}</div>
+            {donkeyHits > 0 && <div className="gan-donkey">🫏 {donkeyHits} EŞEK AT TUTTURULDU · +{donkeyHits * DONKEY_BONUS} BONUS</div>}
             <div className="gan-best">En iyi skorun: {Math.max(best, points)} puan</div>
 
             <div className="recap">
@@ -316,7 +335,7 @@ export default function Ganyan() {
                   <div key={li} className={`recap-row ${res?.correct ? 'ok' : 'fail'}`}>
                     <span className="rr-leg">A{li + 1}</span>
                     <span className="rr-name">{leg.name}</span>
-                    <span className="rr-pick"><i className="silk" style={{ background: myPick.silk }}>{picks[li] + 1}</i>{myPick.name}</span>
+                    <span className="rr-pick"><i className="silk" style={{ background: myPick.silk }}>{picks[li] + 1}</i>{myPick.name}{res?.donkey && <em className="rr-donkey">EŞEK</em>}</span>
                     <span className="rr-arrow">→</span>
                     <span className="rr-win">{winHorse ? winHorse.name : '—'}</span>
                     <span className="rr-mark">{res?.correct ? '✓' : '✕'}</span>
