@@ -559,3 +559,34 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .leg-tab { padding: 7px 2px; }
   .lt-label { font-size: 10px; letter-spacing: 0; }
 }
+
+/* tekli yarış — oran sütunu / eşek at (Faz 1.5) */
+.horse-row .hcol { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; text-align: left; }
+.horse-row .hcol .hname { display: flex; align-items: center; gap: 6px; }
+.hform2 { display: flex; gap: 8px; font-size: 10px; color: var(--ivory-dim); font-variant-numeric: tabular-nums; }
+.hform2 b { font-weight: 600; opacity: .65; }
+.hform2 b.on { opacity: 1; color: var(--ivory); }
+.row-odds {
+  font-family: var(--display); font-weight: 800; font-size: 19px; color: var(--gold);
+  font-variant-numeric: tabular-nums; flex: none;
+}
+.row-odds small { font-size: 11px; font-weight: 700; opacity: .7; margin-left: 1px; }
+.donkey-tag {
+  font-style: normal; font-size: 8.5px; font-weight: 800; letter-spacing: .5px;
+  color: var(--turf); background: var(--gold); padding: 1px 5px; border-radius: 999px;
+}
+
+/* ganyan — oran sütunu / eşek (Faz 1.5) */
+.gan-horse { grid-template-columns: 24px 1fr auto auto; }
+.gh-odds { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.gh-odds b { font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.gh-odds b small { font-size: 10px; font-weight: 700; opacity: .7; }
+.donkey-tag {
+  font-style: normal; font-size: 8px; font-weight: 800; letter-spacing: .5px;
+  color: var(--turf); background: var(--gold); padding: 1px 5px; border-radius: 999px;
+}
+.gan-donkey { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--gold); margin-top: 4px; }
+.rr-donkey {
+  font-style: normal; font-size: 8px; font-weight: 800; letter-spacing: .5px; margin-left: 5px;
+  color: var(--turf); background: var(--gold); padding: 1px 4px; border-radius: 999px;
+}
