@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import * as sfx from './sound'
 import {
   MODES, TICK_MS, rollFace, rankOrder, pickGanyanLineup, pickNames, DISTANCES,
-  buildField, weightedPick, RaceTrack,
+  buildField, weightedPick, genBots, botNick, RaceTrack,
 } from './game'
 
 const LEGS = 6
@@ -12,6 +12,37 @@ const DONKEY_BONUS = 150 // eşek at tutturma bonusu (puan)
 /* ayağın ratingleri: genel + form durumu (form artık sonucu etkiler) */
 function legRatings(leg) {
   return leg.lineup.map((h) => h.genel + (h.form.key === 'formda' ? 4 : h.form.key === 'yukselen' ? 2 : -3))
+}
+
+const ls = {
+  get(k, d) { try { return localStorage.getItem(k) ?? d } catch { return d } },
+  set(k, v) { try { localStorage.setItem(k, v) } catch { /* gizli mod */ } },
+}
+
+/* anonim cihaz kimliği + takma ad */
+function loadIdentity() {
+  let id = ls.get('hd_uid')
+  if (!id) { id = 'u' + Math.random().toString(36).slice(2, 9); ls.set('hd_uid', id) }
+  let nick = ls.get('hd_nick')
+  if (!nick) { nick = botNick(Math.floor(Math.random() * 990)); ls.set('hd_nick', nick) }
+  return { id, nick }
+}
+
+const today = () => new Date().toISOString().slice(0, 10)
+const fmtN = (n) => n.toLocaleString('tr-TR')
+
+/* bir kupon dizisinin puanı (bot ve oyuncu için ortak) */
+function scorePicks(pk, results, fields) {
+  let correct = 0, streak = 0, broken = false, donkey = 0
+  for (let l = 0; l < results.length; l++) {
+    if (pk[l] === results[l].winner) {
+      correct++
+      if (!broken) streak++
+      if (pk[l] === fields[l].donkeyIdx) donkey++
+    } else broken = true
+  }
+  const perfect = correct === LEGS && results.length === LEGS
+  return correct * 100 + streak * 50 + donkey * DONKEY_BONUS + (perfect ? 1000 : 0)
 }
 
 function buildCoupon() {
@@ -64,7 +95,7 @@ function RaceRunner({ lineup, mode, theme, mineIdx, weights, onFinish }) {
   )
 }
 
-export default function Ganyan() {
+export default function Ganyan({ online = false }) {
   const [stage, setStage] = useState('coupon') // coupon | racing | result
   const [theme, setTheme] = useState('grass')
   const [muted, setMutedState] = useState(false)
@@ -79,12 +110,23 @@ export default function Ganyan() {
   const [gap, setGap] = useState(GAP_SEC)
   const [results, setResults] = useState([]) // her ayak: { winner, correct }
   const [best, setBest] = useState(0)
+  const [identity, setIdentity] = useState(loadIdentity)
+  const [playerCount, setPlayerCount] = useState(() => 400 + Math.floor(Math.random() * 1600))
 
   const mode = MODES[modeKey]
   const allPicked = picks.every((p) => p !== null)
 
   // her ayağın oranları: genel + form -> Monte Carlo (mod değişince yeniden hesaplanır)
   const fields = useMemo(() => coupon.map((leg) => buildField(legRatings(leg), MODES[modeKey])), [coupon, modeKey])
+
+  // simüle rakipler (online): oranlara göre ağırlıklı kuponlar
+  const bots = useMemo(() => (online ? genBots(fields, playerCount) : null), [online, fields, playerCount])
+
+  // canlı: kaç bot hâlâ ayakta (tüm tahminleri tutmuş)
+  const botsAlive = useMemo(() => {
+    if (!bots || results.length === 0) return playerCount
+    return bots.picks.reduce((acc, pk) => acc + (results.every((r, l) => pk[l] === r.winner) ? 1 : 0), 0)
+  }, [bots, results, playerCount])
 
   /* ayaklar arası geri sayım */
   useEffect(() => {
@@ -138,6 +180,7 @@ export default function Ganyan() {
     setPicks(Array(LEGS).fill(null))
     setActiveLeg(0)
     setLegIndex(0); setBetween(false); setGap(GAP_SEC); setResults([])
+    setPlayerCount(400 + Math.floor(Math.random() * 1600))
     setStage('coupon')
   }
 
@@ -154,10 +197,32 @@ export default function Ganyan() {
   const perfect = correctCount === LEGS && results.length === LEGS
   const points = correctCount * 100 + aliveStreak * 50 + donkeyHits * DONKEY_BONUS + (perfect ? 1000 : 0)
 
+  // online liderlik tablosu (sonuç ekranında)
+  const leaderboard = useMemo(() => {
+    if (!online || !bots || stage !== 'result') return null
+    const rows = bots.picks.map((pk, i) => ({ nick: botNick(i), pts: scorePicks(pk, results, fields), me: false }))
+    rows.push({ nick: identity.nick, pts: points, me: true })
+    rows.sort((a, b) => b.pts - a.pts)
+    const rank = rows.findIndex((r) => r.me) + 1
+    return { top: rows.slice(0, 10), rank, total: rows.length, pct: Math.max(1, Math.round((rank / rows.length) * 100)) }
+  }, [online, bots, stage, results, fields, points, identity.nick])
+
+  const [dailyBest, setDailyBest] = useState(0)
   useEffect(() => {
-    if (stage === 'result' && points > best) setBest(points)
+    if (stage !== 'result') return
+    const key = 'hd_best_' + today()
+    const prev = parseInt(ls.get(key, '0'), 10) || 0
+    const nb = Math.max(prev, points)
+    if (nb !== prev) ls.set(key, String(nb))
+    setDailyBest(nb)
+    if (points > best) setBest(points)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage])
+
+  function changeNick() {
+    const n = window.prompt('Takma adın:', identity.nick)
+    if (n && n.trim()) { const v = n.trim().slice(0, 16); ls.set('hd_nick', v); setIdentity((m) => ({ ...m, nick: v })) }
+  }
 
   /* anlık "kaç ayaktır devam" (sıralı doğru) */
   let liveStreak = 0
@@ -170,9 +235,14 @@ export default function Ganyan() {
         <div className="brand">
           <span className="brand-flag" />
           <h1>HİPODROM <em>DERBY</em></h1>
-          <span className="demo-badge gan">6'LI GANYAN</span>
+          <span className="demo-badge gan">{online ? 'ONLINE · PROTOTİP' : "6'LI GANYAN"}</span>
         </div>
         <div className="head-right">
+          {online && (
+            <button className="id-chip" onClick={changeNick} title="Takma adını değiştir">
+              <span className="id-dot" />{identity.nick}<span className="id-edit">✎</span>
+            </button>
+          )}
           <button className={`icon-btn ${muted ? 'muted' : ''}`} onClick={toggleSound} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}>
             {muted ? (
               <svg viewBox="0 0 24 24" width="17" height="17" fill="none"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor" /><path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
@@ -198,7 +268,7 @@ export default function Ganyan() {
               </div>
               <div>
                 <div className="gan-bar-title">{revealed ? 'FORMLAR BELİRLENDİ' : 'FORM ÇARKI'}</div>
-                <div className="gan-bar-sub">{revealed ? 'Her ayaktan bir at seç' : 'Atların formunu çark belirler'}</div>
+                <div className="gan-bar-sub">{online ? `👥 ${fmtN(playerCount)} oyuncu bu etapta` : revealed ? 'Her ayaktan bir at seç' : 'Atların formunu çark belirler'}</div>
               </div>
             </div>
             <div className="gan-bar-right">
@@ -250,6 +320,10 @@ export default function Ganyan() {
                           {revealed && <span className="form-badge" style={{ '--fc': h.form.color }}>{h.form.label}</span>}
                         </span>
                         <span className="gh-stats">HIZ {h.hiz} · GÜÇ {h.guc} · {h.kilo}KG · GENEL {h.genel}</span>
+                        {online && revealed && bots && (() => {
+                          const c = bots.counts[li][hi]; const pct = (c / playerCount) * 100
+                          return <span className="gh-share">👥 %{pct >= 1 ? Math.round(pct) : c > 0 ? '<1' : '0'} oyuncu seçti</span>
+                        })()}
                       </span>
                       {revealed && (
                         <span className="gh-odds">
@@ -277,6 +351,7 @@ export default function Ganyan() {
                 {between ? <>SONRAKİ AYAK — {gap} SN</> : <><span className="live-dot" /> AYAK {legIndex + 1}/{LEGS} · {coupon[legIndex].name.toUpperCase()}</>}
               </div>
               <div className="head-right">
+                {online && <span className="alive-pill players">👥 {fmtN(botsAlive)} ayakta</span>}
                 <span className={`alive-pill ${results.length > 0 && !stillAlive ? 'dead' : ''}`}>
                   {results.length === 0 ? 'KUPON CANLI' : stillAlive ? `${liveStreak} AYAKTIR DEVAM` : `${correctCount}/${results.length} DOĞRU`}
                 </span>
@@ -291,6 +366,13 @@ export default function Ganyan() {
                 <div className="gap-info">
                   <div className="gap-title">{results[results.length - 1].correct ? 'TUTTU!' : 'BU AYAĞI KAÇIRDIN'}</div>
                   <div className="gap-sub">Kazanan: {coupon[legIndex].lineup[results[results.length - 1].winner].name}</div>
+                  {online && bots && (() => {
+                    const before = results.length <= 1
+                      ? playerCount
+                      : bots.picks.reduce((a, pk) => a + (results.slice(0, -1).every((r, l) => pk[l] === r.winner) ? 1 : 0), 0)
+                    const elimPct = before > 0 ? Math.round(((before - botsAlive) / before) * 100) : 0
+                    return <div className="gap-elim">Bu ayakta <b>%{elimPct}</b> oyuncu elendi · {fmtN(botsAlive)} kişi devam ediyor</div>
+                  })()}
                 </div>
                 <button className="btn btn-gold" onClick={() => setGap(0)}>SONRAKİ AYAK</button>
               </div>
@@ -324,7 +406,30 @@ export default function Ganyan() {
             <div className="gan-score">{correctCount}<span>/6 DOĞRU</span></div>
             <div className="gan-points">+{points} PUAN {perfect && <em>· TAM KUPON BONUSU!</em>}</div>
             {donkeyHits > 0 && <div className="gan-donkey">🫏 {donkeyHits} EŞEK AT TUTTURULDU · +{donkeyHits * DONKEY_BONUS} BONUS</div>}
-            <div className="gan-best">En iyi skorun: {Math.max(best, points)} puan</div>
+            {online && leaderboard ? (
+              <div className="gan-rank">Sıralaman <b>{fmtN(leaderboard.rank)}</b> / {fmtN(leaderboard.total)} · üst <b>%{leaderboard.pct}</b></div>
+            ) : null}
+            <div className="gan-best">{online ? `Bugünkü en iyin: ${fmtN(dailyBest)} puan` : `En iyi skorun: ${Math.max(best, points)} puan`}</div>
+
+            {online && leaderboard && (
+              <div className="leaderboard">
+                <div className="lb-title">LİDERLİK TABLOSU · ETAP</div>
+                {leaderboard.top.map((row, i) => (
+                  <div key={i} className={`lb-row ${row.me ? 'me' : ''}`}>
+                    <span className="lb-rank">{i + 1}</span>
+                    <span className="lb-nick">{row.nick}{row.me && <em>SEN</em>}</span>
+                    <span className="lb-pts">{fmtN(row.pts)}</span>
+                  </div>
+                ))}
+                {leaderboard.rank > 10 && (
+                  <div className="lb-row me lb-sep">
+                    <span className="lb-rank">{fmtN(leaderboard.rank)}</span>
+                    <span className="lb-nick">{identity.nick}<em>SEN</em></span>
+                    <span className="lb-pts">{fmtN(points)}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="recap">
               {coupon.map((leg, li) => {
