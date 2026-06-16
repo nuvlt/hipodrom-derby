@@ -95,6 +95,74 @@ export function rankOrder(positions) {
     .map((o) => o.i)
 }
 
+/* ==================================================================
+   OLASILIK / ORAN MODELİ (Faz 1.5)
+   Atlara gerçek (farklı) kazanma olasılığı verir; oranları Monte Carlo
+   ile ölçüp RTP'yi sabit tutar. Zar/top mekaniği korunur — sadece güçlü
+   atlar yüksek yüzleri daha sık atar.
+   ================================================================== */
+
+export const TARGET_RTP = 0.929 // mevcut RTP korunur
+const DRIVE_K = 0.20            // güç → olasılık yayılımı (kalibre edildi)
+
+const avg = (a) => a.reduce((s, x) => s + x, 0) / a.length
+
+/* bir atın "drive" değerine göre yüz olasılıkları (softmax eğimi) */
+export function faceWeights(faces, drive) {
+  const m = avg(faces)
+  const sd = Math.sqrt(avg(faces.map((v) => (v - m) * (v - m)))) || 1
+  const w = faces.map((v) => Math.exp(drive * (v - m) / sd))
+  const s = w.reduce((a, b) => a + b, 0)
+  return w.map((x) => x / s)
+}
+
+/* ağırlıklı yüz çekimi */
+export function weightedPick(faces, weights) {
+  let r = Math.random()
+  for (let i = 0; i < faces.length; i++) { r -= weights[i]; if (r <= 0) return faces[i] }
+  return faces[faces.length - 1]
+}
+
+/* alan içi göreli ratinglerden drive üret (favori + eşek doğal oluşur) */
+export function drivesFromRatings(ratings, K = DRIVE_K) {
+  const m = avg(ratings)
+  return ratings.map((r) => K * (r - m) / 8)
+}
+
+/* Monte Carlo: alanın kazanma ve ilk-2 olasılıkları (canlı yarışla aynı mekanik) */
+export function simulateField(weightsPerHorse, faces, trackLen, N = 3000) {
+  const n = weightsPerHorse.length
+  const wins = Array(n).fill(0)
+  const top2 = Array(n).fill(0)
+  for (let s = 0; s < N; s++) {
+    const pos = Array(n).fill(0)
+    while (!pos.some((p) => p >= trackLen)) {
+      for (let i = 0; i < n; i++) pos[i] += weightedPick(faces, weightsPerHorse[i])
+    }
+    const ord = rankOrder(pos)
+    wins[ord[0]]++
+    top2[ord[0]]++; top2[ord[1]]++
+  }
+  return { pWin: wins.map((w) => w / N), pTop2: top2.map((t) => t / N) }
+}
+
+export function oddsFromProb(p, target = TARGET_RTP, cap = 99) {
+  if (p <= 0) return cap
+  return Math.min(cap, Math.max(1.05, (1 / p) * target))
+}
+
+/* alanı kur: ratingler + mod → drive, ağırlık, olasılık, oran, eşek at */
+export function buildField(ratings, mode, N = 3000) {
+  const drives = drivesFromRatings(ratings)
+  const weights = drives.map((d) => faceWeights(mode.faces, d))
+  const { pWin, pTop2 } = simulateField(weights, mode.faces, mode.track, N)
+  const oddsWin = pWin.map((p) => oddsFromProb(p))
+  const oddsPlase = pTop2.map((p) => oddsFromProb(p))
+  let donkeyIdx = 0
+  for (let i = 1; i < pWin.length; i++) if (pWin[i] < pWin[donkeyIdx]) donkeyIdx = i
+  return { drives, weights, pWin, pTop2, oddsWin, oddsPlase, donkeyIdx }
+}
+
 /* ------------------------------------------------------------------ */
 /*  AT — yarış atı silüeti (sağa bakar)                                */
 /* ------------------------------------------------------------------ */
