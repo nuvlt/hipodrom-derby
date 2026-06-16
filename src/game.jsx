@@ -163,6 +163,42 @@ export function buildField(ratings, mode, N = 3000) {
   return { drives, weights, pWin, pTop2, oddsWin, oddsPlase, donkeyIdx }
 }
 
+/* ==================================================================
+   SİMÜLE ÇOK OYUNCULU (Faz 1.8 — botlarla UX prototipi, client-side)
+   ================================================================== */
+
+export const NICK_POOL = [
+  'AtSever', 'Jokey', 'Ganyancı', 'Sprint', 'Fotofiniş', 'Doludizgin', 'Koşucu',
+  'Şahbaz', 'Rüzgâr', 'Nalbant', 'Şanslı', 'Bahisçi', 'PistKralı', 'Derbi',
+  'Gözde', 'Favori', 'Sürpriz', 'Tabela', 'KuponCanavarı', 'Handikap', 'Apranti',
+  'Safkan', 'Eşekçi', 'Üçlübir', 'Altılı', 'Çıkış', 'Düzlük', 'Viraj', 'Start',
+]
+
+export function botNick(i) {
+  return NICK_POOL[i % NICK_POOL.length] + (10 + (i * 37) % 990)
+}
+
+export function weightedIndex(weights) {
+  let r = Math.random() * weights.reduce((a, b) => a + b, 0)
+  for (let i = 0; i < weights.length; i++) { r -= weights[i]; if (r <= 0) return i }
+  return weights.length - 1
+}
+
+/* botların kupon seçimleri: her ayakta oranlara göre ağırlıklı (favori daha çok seçilir) */
+export function genBots(fields, count) {
+  const nLegs = fields.length
+  const n = fields[0].pWin.length
+  const wPerLeg = fields.map((f) => f.pWin.map((p) => Math.pow(p, 0.85) + 0.03))
+  const picks = new Array(count)
+  const counts = fields.map(() => new Array(n).fill(0))
+  for (let b = 0; b < count; b++) {
+    const pk = new Array(nLegs)
+    for (let l = 0; l < nLegs; l++) { const h = weightedIndex(wPerLeg[l]); pk[l] = h; counts[l][h]++ }
+    picks[b] = pk
+  }
+  return { picks, counts }
+}
+
 /* ------------------------------------------------------------------ */
 /*  AT — yarış atı silüeti (sağa bakar)                                */
 /* ------------------------------------------------------------------ */
