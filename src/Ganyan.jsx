@@ -1,15 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as sfx from './sound'
 import {
-  MODES, TICK_MS, rollFace, rankOrder, pickGanyanLineup, pickNames, DISTANCES,
-  buildField, weightedPick, genBots, botNick, RaceTrack,
+  MODES, TICK_MS, rankOrder, pickGanyanLineup, pickNames, DISTANCES,
+  buildField, weightedPick, raceOnce, genBots, botNick, RaceTrack,
 } from './game'
 
 const LEGS = 6
-const GAP_SEC = 5 // ayaklar arası bekleme (çok oyuncuda 30 sn olacak)
-const DONKEY_BONUS = 150 // eşek at tutturma bonusu (puan)
+const GAP_SEC = 7            // ayaklar arası karar penceresi (çok oyuncuda 30 sn olacak)
+const START_BAL = 1000       // demo bakiye (TL)
+const CHIPS = [10, 25, 50, 100, 250]
+const MODE = MODES.sayi      // ganyan arkada hep Sayılı Zar ile koşar
 
-/* ayağın ratingleri: genel + form durumu (form artık sonucu etkiler) */
+function buildCoupon() {
+  const names = pickNames(LEGS)
+  return names.map((name, i) => ({ name, dist: DISTANCES[i % DISTANCES.length], lineup: pickGanyanLineup() }))
+}
+
 function legRatings(leg) {
   return leg.lineup.map((h) => h.genel + (h.form.key === 'formda' ? 4 : h.form.key === 'yukselen' ? 2 : -3))
 }
@@ -19,7 +25,6 @@ const ls = {
   set(k, v) { try { localStorage.setItem(k, v) } catch { /* gizli mod */ } },
 }
 
-/* anonim cihaz kimliği + takma ad */
 function loadIdentity() {
   let id = ls.get('hd_uid')
   if (!id) { id = 'u' + Math.random().toString(36).slice(2, 9); ls.set('hd_uid', id) }
@@ -29,40 +34,58 @@ function loadIdentity() {
 }
 
 const today = () => new Date().toISOString().slice(0, 10)
-const fmtN = (n) => n.toLocaleString('tr-TR')
+const fmtN = (n) => Math.round(n).toLocaleString('tr-TR')
 
-/* bir kupon dizisinin puanı (bot ve oyuncu için ortak) */
-function scorePicks(pk, results, fields) {
-  let correct = 0, streak = 0, broken = false, donkey = 0
-  for (let l = 0; l < results.length; l++) {
-    if (pk[l] === results[l].winner) {
-      correct++
-      if (!broken) streak++
-      if (pk[l] === fields[l].donkeyIdx) donkey++
-    } else broken = true
+/* bir botun etap sonucu: hedef ayağa kadar tutarsa bozdurur, yoksa yanar */
+function botOutcome(pk, stake, target, results, fields) {
+  let hits = 0
+  for (let l = 0; l < results.length; l++) { if (pk[l] === results[l].winner) hits++; else break }
+  if (hits >= target) {
+    let m = 1
+    for (let l = 0; l < target; l++) m *= fields[l].oddsWin[pk[l]]
+    const win = stake * m
+    return { net: win - stake, win, mult: m, cashed: true }
   }
-  const perfect = correct === LEGS && results.length === LEGS
-  return correct * 100 + streak * 50 + donkey * DONKEY_BONUS + (perfect ? 1000 : 0)
+  return { net: -stake, win: 0, mult: 0, cashed: false }
 }
 
-function buildCoupon() {
-  const names = pickNames(LEGS)
-  return names.map((name, i) => ({ name, dist: DISTANCES[i % DISTANCES.length], lineup: pickGanyanLineup() }))
+/* o ayakta bozduran / elenen botlardan canlı akış için örnek olaylar */
+function genLegFeed(bots, fields, results, L) {
+  const cashed = [], busted = []
+  const { picks, stakes, targets } = bots
+  for (let b = 0; b < picks.length; b++) {
+    const pk = picks[b]
+    let okBefore = true
+    for (let l = 0; l < L; l++) { if (pk[l] !== results[l].winner) { okBefore = false; break } }
+    if (!okBefore) continue
+    const hitL = pk[L] === results[L].winner
+    if (hitL && targets[b] === L + 1) {
+      let m = 1; for (let l = 0; l <= L; l++) m *= fields[l].oddsWin[pk[l]]
+      cashed.push({ nick: botNick(b), mult: m, win: stakes[b] * m })
+    } else if (!hitL && targets[b] > L) {
+      busted.push(botNick(b))
+    }
+  }
+  const take = (arr, k) => { const c = [...arr], out = []; for (let i = 0; i < k && c.length; i++) out.push(c.splice(Math.floor(Math.random() * c.length), 1)[0]); return out }
+  const ev = []
+  take(cashed, 2).forEach((c) => ev.push({ type: 'cash', nick: c.nick, text: `${c.mult.toFixed(2)}x'te bozdurdu · +${fmtN(c.win)} TL` }))
+  take(busted, 2).forEach((n) => ev.push({ type: 'bust', nick: n, text: 'elendi' }))
+  return ev
 }
 
 /* tek bir ayağı otomatik koşturur, bitince onFinish(sıralama) çağırır */
-function RaceRunner({ lineup, mode, theme, mineIdx, weights, onFinish }) {
+function RaceRunner({ lineup, theme, mineIdx, weights, onFinish }) {
   const [positions, setPositions] = useState(Array(7).fill(0))
   const [lastRolls, setLastRolls] = useState(Array(7).fill(null))
   const [tick, setTick] = useState(0)
   const [order, setOrder] = useState(null)
-  const trackLen = mode.track
+  const trackLen = MODE.track
   const done = order !== null
 
   useEffect(() => {
     if (done) return
     const t = setTimeout(() => {
-      const rolls = lineup.map((_, i) => weightedPick(mode.faces, weights[i]))
+      const rolls = lineup.map((_, i) => weightedPick(MODE.faces, weights[i]))
       const next = positions.map((p, i) => p + rolls[i])
       setLastRolls(rolls); setPositions(next); setTick((k) => k + 1)
       sfx.hoof()
@@ -83,7 +106,7 @@ function RaceRunner({ lineup, mode, theme, mineIdx, weights, onFinish }) {
     <>
       <RaceTrack
         theme={theme} lineup={lineup} positions={positions} trackLen={trackLen}
-        modeKey={mode.key} lastRolls={lastRolls} tick={tick}
+        modeKey={MODE.key} lastRolls={lastRolls} tick={tick}
         mineIdx={mineIdx} winnerIdx={done ? order[0] : null} placeIdx={done ? order[1] : null} running={!done}
       />
       <div className="rem-bar">
@@ -99,7 +122,6 @@ export default function Ganyan({ online = false }) {
   const [stage, setStage] = useState('coupon') // coupon | racing | result
   const [theme, setTheme] = useState('grass')
   const [muted, setMutedState] = useState(false)
-  const [modeKey, setModeKey] = useState('sayi')
   const [coupon, setCoupon] = useState(() => buildCoupon())
   const [revealed, setRevealed] = useState(false)
   const [spinning, setSpinning] = useState(false)
@@ -108,43 +130,48 @@ export default function Ganyan({ online = false }) {
   const [legIndex, setLegIndex] = useState(0)
   const [between, setBetween] = useState(false)
   const [gap, setGap] = useState(GAP_SEC)
-  const [results, setResults] = useState([]) // her ayak: { winner, correct }
-  const [best, setBest] = useState(0)
+  const [results, setResults] = useState([])
   const [identity, setIdentity] = useState(loadIdentity)
   const [playerCount, setPlayerCount] = useState(() => 400 + Math.floor(Math.random() * 1600))
+  const [feed, setFeed] = useState([])
 
-  const mode = MODES[modeKey]
-  const allPicked = picks.every((p) => p !== null)
+  // bahis
+  const [balance, setBalance] = useState(START_BAL)
+  const [stake, setStake] = useState(50)
+  const [placedStake, setPlacedStake] = useState(0)
+  const [multiplier, setMultiplier] = useState(1)
+  const [settled, setSettled] = useState('riding') // riding | cashed | busted | won
+  const [payout, setPayout] = useState(0)
+  const [bestWin, setBestWin] = useState(0)
 
-  // her ayağın oranları: genel + form -> Monte Carlo (mod değişince yeniden hesaplanır)
-  const fields = useMemo(() => coupon.map((leg) => buildField(legRatings(leg), MODES[modeKey])), [coupon, modeKey])
-
-  // simüle rakipler (online): oranlara göre ağırlıklı kuponlar
+  const fields = useMemo(() => coupon.map((leg) => buildField(legRatings(leg), MODE)), [coupon])
   const bots = useMemo(() => (online ? genBots(fields, playerCount) : null), [online, fields, playerCount])
 
-  // canlı: kaç bot hâlâ ayakta (tüm tahminleri tutmuş)
+  const allPicked = picks.every((p) => p !== null)
+  const potential = allPicked ? picks.reduce((m, p, l) => m * fields[l].oddsWin[p], 1) : 0
+
   const botsAlive = useMemo(() => {
     if (!bots || results.length === 0) return playerCount
     return bots.picks.reduce((acc, pk) => acc + (results.every((r, l) => pk[l] === r.winner) ? 1 : 0), 0)
   }, [bots, results, playerCount])
 
-  /* ayaklar arası geri sayım */
+  /* ayaklar arası geri sayım — oyuncu sürüyorsa otomatik geçmez, karar bekler */
   useEffect(() => {
     if (stage !== 'racing' || !between) return
-    if (gap <= 0) {
-      if (legIndex + 1 < LEGS) { setLegIndex((i) => i + 1); setBetween(false); setGap(GAP_SEC) }
-      else finishStage()
-      return
-    }
+    if (gap <= 0) { advance(); return }
     const t = setTimeout(() => { sfx.tick(); setGap((g) => g - 1) }, 1000)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, between, gap])
 
+  function advance() {
+    if (legIndex + 1 < LEGS) { setLegIndex((i) => i + 1); setBetween(false); setGap(GAP_SEC) }
+    else setStage('result')
+  }
+
   function spinWheel() {
     if (spinning || revealed) return
-    sfx.start()
-    setSpinning(true)
+    sfx.start(); setSpinning(true)
     setTimeout(() => { setSpinning(false); setRevealed(true) }, 1700)
   }
 
@@ -155,79 +182,100 @@ export default function Ganyan({ online = false }) {
     if (leg < LEGS - 1) setTimeout(() => setActiveLeg(leg + 1), 260)
   }
 
+  const canPlay = allPicked && stake > 0 && stake <= balance
+
   function playCoupon() {
-    if (!allPicked) return
+    if (!canPlay) return
     sfx.start()
-    setResults([]); setLegIndex(0); setBetween(false); setGap(GAP_SEC); setStage('racing')
+    setBalance((b) => b - stake)
+    setPlacedStake(stake); setMultiplier(1); setSettled('riding'); setPayout(0)
+    setResults([]); setFeed([]); setLegIndex(0); setBetween(false); setGap(GAP_SEC)
+    setStage('racing')
+  }
+
+  function bumpBestWin(win) {
+    const key = 'hd_bestwin_' + today()
+    const prev = parseInt(ls.get(key, '0'), 10) || 0
+    const nb = Math.max(prev, Math.round(win))
+    if (nb !== prev) ls.set(key, String(nb))
+    setBestWin((x) => Math.max(x, nb))
   }
 
   function onLegFinish(order) {
     const correct = order[0] === picks[legIndex]
-    const donkey = correct && picks[legIndex] === fields[legIndex].donkeyIdx
-    if (correct) sfx.win(); else sfx.lose()
-    setResults((r) => [...r, { winner: order[0], correct, donkey }])
-    setBetween(true)
-    setGap(GAP_SEC)
+    const newResults = [...results, { winner: order[0], correct }]
+    setResults(newResults)
+
+    if (settled === 'riding') {
+      if (!correct) {
+        setSettled('busted'); sfx.lose()
+      } else {
+        let m = 1
+        for (let l = 0; l <= legIndex; l++) { if (newResults[l].correct) m *= fields[l].oddsWin[picks[l]]; else break }
+        setMultiplier(m); sfx.win()
+        if (legIndex === LEGS - 1) {
+          const win = placedStake * m
+          setSettled('won'); setPayout(win); setBalance((b) => b + win); bumpBestWin(win)
+        }
+      }
+    }
+
+    if (online && bots) setFeed((f) => [...genLegFeed(bots, fields, newResults, legIndex), ...f].slice(0, 8))
+    setBetween(true); setGap(GAP_SEC)
   }
 
-  function finishStage() {
-    setStage('result')
+  function cashOut() {
+    if (settled !== 'riding') return
+    const win = placedStake * multiplier
+    setSettled('cashed'); setPayout(win); setBalance((b) => b + win); bumpBestWin(win)
+    sfx.win()
+  }
+
+  function skipToEnd() {
+    const r = [...results]
+    for (let l = r.length; l < LEGS; l++) {
+      const ord = raceOnce(fields[l].weights, MODE)
+      r.push({ winner: ord[0], correct: picks[l] === ord[0] })
+    }
+    setResults(r); setStage('result')
   }
 
   function newStage() {
     setCoupon(buildCoupon())
     setRevealed(false); setSpinning(false)
-    setPicks(Array(LEGS).fill(null))
-    setActiveLeg(0)
-    setLegIndex(0); setBetween(false); setGap(GAP_SEC); setResults([])
+    setPicks(Array(LEGS).fill(null)); setActiveLeg(0)
+    setLegIndex(0); setBetween(false); setGap(GAP_SEC); setResults([]); setFeed([])
     setPlayerCount(400 + Math.floor(Math.random() * 1600))
+    setMultiplier(1); setSettled('riding'); setPayout(0)
     setStage('coupon')
   }
 
   function toggleSound() {
-    const m = !muted
-    setMutedState(m); sfx.setMuted(m); if (!m) sfx.unlock()
+    const m = !muted; setMutedState(m); sfx.setMuted(m); if (!m) sfx.unlock()
   }
-
-  /* skorlama */
-  const correctCount = results.filter((r) => r.correct).length
-  const donkeyHits = results.filter((r) => r.donkey).length
-  let aliveStreak = 0
-  for (const r of results) { if (r.correct) aliveStreak++; else break }
-  const perfect = correctCount === LEGS && results.length === LEGS
-  const points = correctCount * 100 + aliveStreak * 50 + donkeyHits * DONKEY_BONUS + (perfect ? 1000 : 0)
-
-  // online liderlik tablosu (sonuç ekranında)
-  const leaderboard = useMemo(() => {
-    if (!online || !bots || stage !== 'result') return null
-    const rows = bots.picks.map((pk, i) => ({ nick: botNick(i), pts: scorePicks(pk, results, fields), me: false }))
-    rows.push({ nick: identity.nick, pts: points, me: true })
-    rows.sort((a, b) => b.pts - a.pts)
-    const rank = rows.findIndex((r) => r.me) + 1
-    return { top: rows.slice(0, 10), rank, total: rows.length, pct: Math.max(1, Math.round((rank / rows.length) * 100)) }
-  }, [online, bots, stage, results, fields, points, identity.nick])
-
-  const [dailyBest, setDailyBest] = useState(0)
-  useEffect(() => {
-    if (stage !== 'result') return
-    const key = 'hd_best_' + today()
-    const prev = parseInt(ls.get(key, '0'), 10) || 0
-    const nb = Math.max(prev, points)
-    if (nb !== prev) ls.set(key, String(nb))
-    setDailyBest(nb)
-    if (points > best) setBest(points)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage])
 
   function changeNick() {
     const n = window.prompt('Takma adın:', identity.nick)
     if (n && n.trim()) { const v = n.trim().slice(0, 16); ls.set('hd_nick', v); setIdentity((m) => ({ ...m, nick: v })) }
   }
 
-  /* anlık "kaç ayaktır devam" (sıralı doğru) */
-  let liveStreak = 0
-  for (const r of results) { if (r.correct) liveStreak++; else break }
-  const stillAlive = results.every((r) => r.correct)
+  function addChip(c) { setStake((s) => Math.min(s + c, balance)) }
+  function setCustom(v) { const n = Math.max(0, Math.min(parseInt(v || '0', 10) || 0, balance)); setStake(n) }
+
+  // skor / sıralama
+  const myNet = settled === 'busted' ? -placedStake : payout - placedStake
+  const leaderboard = useMemo(() => {
+    if (!online || !bots || stage !== 'result') return null
+    const rows = bots.picks.map((pk, i) => ({ nick: botNick(i), net: botOutcome(pk, bots.stakes[i], bots.targets[i], results, fields).net, me: false }))
+    rows.push({ nick: identity.nick, net: myNet, me: true })
+    rows.sort((a, b) => b.net - a.net)
+    const rank = rows.findIndex((r) => r.me) + 1
+    return { top: rows.slice(0, 10), rank, total: rows.length, pct: Math.max(1, Math.round((rank / rows.length) * 100)) }
+  }, [online, bots, stage, results, fields, myNet, identity.nick])
+
+  const correctCount = results.filter((r) => r.correct).length
+  const liveStreak = (() => { let s = 0; for (const r of results) { if (r.correct) s++; else break } return s })()
+  const stillAlive = settled === 'riding'
 
   return (
     <div className="app">
@@ -243,6 +291,7 @@ export default function Ganyan({ online = false }) {
               <span className="id-dot" />{identity.nick}<span className="id-edit">✎</span>
             </button>
           )}
+          <div className="bal-chip"><span className="bal-lbl">BAKİYE</span><b>{fmtN(balance)} TL</b></div>
           <button className={`icon-btn ${muted ? 'muted' : ''}`} onClick={toggleSound} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}>
             {muted ? (
               <svg viewBox="0 0 24 24" width="17" height="17" fill="none"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor" /><path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
@@ -272,28 +321,37 @@ export default function Ganyan({ online = false }) {
               </div>
             </div>
             <div className="gan-bar-right">
-              <div className="seg modes gan-mode">
-                {Object.values(MODES).map((m) => (
-                  <button key={m.key} className={modeKey === m.key ? 'active' : ''} onClick={() => setModeKey(m.key)}><b>{m.label}</b></button>
-                ))}
-              </div>
               {!revealed ? (
                 <button className="btn btn-gold" onClick={spinWheel} disabled={spinning}>{spinning ? 'ÇEVRİLİYOR…' : 'ÇARKI ÇEVİR'}</button>
               ) : (
-                <button className="btn btn-gold" disabled={!allPicked} onClick={playCoupon}>{allPicked ? 'KUPONU OYNAT' : `${picks.filter((p) => p !== null).length}/6 SEÇİLDİ`}</button>
+                <button className="btn btn-gold" disabled={!canPlay} onClick={playCoupon}>
+                  {!allPicked ? `${picks.filter((p) => p !== null).length}/6 SEÇ` : stake <= 0 ? 'BAHİS GİR' : stake > balance ? 'BAKİYE YETMİYOR' : `OYNA · ${fmtN(stake)} TL`}
+                </button>
               )}
             </div>
           </div>
 
+          {revealed && (
+            <div className="bet-bar">
+              <div className="bet-stake">
+                <span className="bs-label">BAHİS (TL)</span>
+                <div className="stake-row">
+                  {CHIPS.map((c) => (<button key={c} className="chip" onClick={() => addChip(c)}>+{c}</button>))}
+                  <button className="chip chip-clear" disabled={stake === 0} onClick={() => setStake(0)}>SİL</button>
+                  <input className="stake-input" type="number" min="0" value={stake || ''} onChange={(e) => setCustom(e.target.value)} placeholder="0" />
+                </div>
+              </div>
+              <div className="bet-pot">
+                <span className="bs-label">TÜM AYAKLAR TUTARSA</span>
+                <span className="bs-value gold">{allPicked && stake > 0 ? `${fmtN(stake * potential)} TL` : '—'}</span>
+                {allPicked && <span className="pot-mult">{potential.toFixed(2)}x</span>}
+              </div>
+            </div>
+          )}
+
           <div className="leg-tabs" role="tablist">
             {coupon.map((leg, li) => (
-              <button
-                key={li}
-                role="tab"
-                aria-selected={activeLeg === li}
-                className={`leg-tab ${activeLeg === li ? 'active' : ''} ${picks[li] !== null ? 'done' : ''}`}
-                onClick={() => setActiveLeg(li)}
-              >
+              <button key={li} role="tab" aria-selected={activeLeg === li} className={`leg-tab ${activeLeg === li ? 'active' : ''} ${picks[li] !== null ? 'done' : ''}`} onClick={() => setActiveLeg(li)}>
                 <span className="lt-label">AYAK {li + 1}</span>
                 <span className="lt-mark">{picks[li] !== null ? '✓' : '·'}</span>
               </button>
@@ -338,7 +396,7 @@ export default function Ganyan({ online = false }) {
               </div>
             )
           })()}
-          <p className="fineprint">İstatistikler ve form atın kazanma şansını (oranını) belirler · Eşek at: en düşük şanslı at — tutturursan +{DONKEY_BONUS} bonus puan · Demo.</p>
+          <p className="fineprint">İstatistik ve form atın oranını belirler · Çarpan tutan ayakların oranlarıyla büyür, ayaklar arası bozdurabilirsin · Teorik RTP %92.9 · Demo bakiye gerçek para değildir.</p>
         </>
       )}
 
@@ -352,34 +410,45 @@ export default function Ganyan({ online = false }) {
               </div>
               <div className="head-right">
                 {online && <span className="alive-pill players">👥 {fmtN(botsAlive)} ayakta</span>}
-                <span className={`alive-pill ${results.length > 0 && !stillAlive ? 'dead' : ''}`}>
-                  {results.length === 0 ? 'KUPON CANLI' : stillAlive ? `${liveStreak} AYAKTIR DEVAM` : `${correctCount}/${results.length} DOĞRU`}
+                <span className={`mult-pill ${settled === 'busted' ? 'dead' : ''}`}>
+                  {settled === 'busted' ? 'YANDI' : settled === 'cashed' ? `BOZDURULDU · ${fmtN(payout)} TL` : `${multiplier.toFixed(2)}x · ${fmtN(placedStake * multiplier)} TL`}
                 </span>
               </div>
             </div>
 
             {!between ? (
-              <RaceRunner key={legIndex} lineup={coupon[legIndex].lineup} mode={mode} theme={theme} mineIdx={picks[legIndex]} weights={fields[legIndex].weights} onFinish={onLegFinish} />
+              <RaceRunner key={legIndex} lineup={coupon[legIndex].lineup} theme={theme} mineIdx={picks[legIndex]} weights={fields[legIndex].weights} onFinish={onLegFinish} />
             ) : (
               <div className="gap-screen">
                 <div className="cd-ring"><span>{gap}</span></div>
                 <div className="gap-info">
-                  <div className="gap-title">{results[results.length - 1].correct ? 'TUTTU!' : 'BU AYAĞI KAÇIRDIN'}</div>
+                  <div className="gap-title">
+                    {settled === 'busted' ? 'ELENDİN' : settled === 'cashed' ? 'BOZDURDUN ✓' : results[results.length - 1].correct ? 'TUTTU!' : '—'}
+                  </div>
                   <div className="gap-sub">Kazanan: {coupon[legIndex].lineup[results[results.length - 1].winner].name}</div>
                   {online && bots && (() => {
-                    const before = results.length <= 1
-                      ? playerCount
-                      : bots.picks.reduce((a, pk) => a + (results.slice(0, -1).every((r, l) => pk[l] === r.winner) ? 1 : 0), 0)
+                    const before = results.length <= 1 ? playerCount : bots.picks.reduce((a, pk) => a + (results.slice(0, -1).every((r, l) => pk[l] === r.winner) ? 1 : 0), 0)
                     const elimPct = before > 0 ? Math.round(((before - botsAlive) / before) * 100) : 0
                     return <div className="gap-elim">Bu ayakta <b>%{elimPct}</b> oyuncu elendi · {fmtN(botsAlive)} kişi devam ediyor</div>
                   })()}
                 </div>
-                <button className="btn btn-gold" onClick={() => setGap(0)}>SONRAKİ AYAK</button>
+                <div className="gap-actions">
+                  {stillAlive ? (
+                    <>
+                      <button className="btn btn-cash" onClick={cashOut}>BOZDUR · {fmtN(placedStake * multiplier)} TL</button>
+                      <button className="btn btn-ghost" onClick={() => setGap(0)}>DEVAM ({gap})</button>
+                    </>
+                  ) : (
+                    <>
+                      <button className="btn btn-gold" onClick={skipToEnd}>SONUCA GEÇ</button>
+                      <button className="btn btn-ghost" onClick={() => setGap(0)}>SONRAKİ AYAK</button>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </section>
 
-          {/* kupon takip şeridi */}
           <div className="coupon-strip">
             {coupon.map((leg, li) => {
               const res = results[li]
@@ -395,40 +464,52 @@ export default function Ganyan({ online = false }) {
               )
             })}
           </div>
+
+          {online && feed.length > 0 && (
+            <div className="feed">
+              <div className="feed-title">CANLI</div>
+              {feed.map((e, i) => (
+                <div key={i} className={`feed-row ${e.type}`}>
+                  <span className="feed-nick">{e.nick}</span> {e.text}
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
 
       {/* ---------------- SONUÇ ---------------- */}
       {stage === 'result' && (
         <section className="track-panel gan-result-panel">
-          <div className={`gan-result ${perfect ? 'perfect' : correctCount > 0 ? 'win' : 'lose'}`}>
+          <div className={`gan-result ${settled === 'won' ? 'perfect' : settled === 'cashed' ? 'win' : 'lose'}`}>
             <div className="result-eyebrow">ETAP SONUCU</div>
-            <div className="gan-score">{correctCount}<span>/6 DOĞRU</span></div>
-            <div className="gan-points">+{points} PUAN {perfect && <em>· TAM KUPON BONUSU!</em>}</div>
-            {donkeyHits > 0 && <div className="gan-donkey">🫏 {donkeyHits} EŞEK AT TUTTURULDU · +{donkeyHits * DONKEY_BONUS} BONUS</div>}
-            {online && leaderboard ? (
-              <div className="gan-rank">Sıralaman <b>{fmtN(leaderboard.rank)}</b> / {fmtN(leaderboard.total)} · üst <b>%{leaderboard.pct}</b></div>
-            ) : null}
-            <div className="gan-best">{online ? `Bugünkü en iyin: ${fmtN(dailyBest)} puan` : `En iyi skorun: ${Math.max(best, points)} puan`}</div>
+            {settled === 'won' && <><div className="gan-score">TAM KUPON!</div><div className="gan-points">6/6 · {multiplier.toFixed(2)}x → <em>+{fmtN(payout)} TL</em></div></>}
+            {settled === 'cashed' && <><div className="gan-score sm">BOZDURDUN</div><div className="gan-points">{multiplier.toFixed(2)}x → <em>+{fmtN(payout)} TL</em></div></>}
+            {settled === 'busted' && <><div className="gan-score sm lose">ELENDİN</div><div className="gan-points">−{fmtN(placedStake)} TL</div></>}
+
+            <div className="gan-best">Bakiye: <b>{fmtN(balance)} TL</b>{online ? ` · Bugünkü en iyi kazanç: ${fmtN(bestWin)} TL` : ''}</div>
 
             {online && leaderboard && (
-              <div className="leaderboard">
-                <div className="lb-title">LİDERLİK TABLOSU · ETAP</div>
-                {leaderboard.top.map((row, i) => (
-                  <div key={i} className={`lb-row ${row.me ? 'me' : ''}`}>
-                    <span className="lb-rank">{i + 1}</span>
-                    <span className="lb-nick">{row.nick}{row.me && <em>SEN</em>}</span>
-                    <span className="lb-pts">{fmtN(row.pts)}</span>
-                  </div>
-                ))}
-                {leaderboard.rank > 10 && (
-                  <div className="lb-row me lb-sep">
-                    <span className="lb-rank">{fmtN(leaderboard.rank)}</span>
-                    <span className="lb-nick">{identity.nick}<em>SEN</em></span>
-                    <span className="lb-pts">{fmtN(points)}</span>
-                  </div>
-                )}
-              </div>
+              <>
+                <div className="gan-rank">Net: <b className={myNet >= 0 ? 'pos' : 'neg'}>{myNet >= 0 ? '+' : '−'}{fmtN(Math.abs(myNet))} TL</b> · sıralama {fmtN(leaderboard.rank)}/{fmtN(leaderboard.total)} · üst %{leaderboard.pct}</div>
+                <div className="leaderboard">
+                  <div className="lb-title">LİDERLİK · EN ÇOK KAZANAN (ETAP)</div>
+                  {leaderboard.top.map((row, i) => (
+                    <div key={i} className={`lb-row ${row.me ? 'me' : ''}`}>
+                      <span className="lb-rank">{i + 1}</span>
+                      <span className="lb-nick">{row.nick}{row.me && <em>SEN</em>}</span>
+                      <span className={`lb-pts ${row.net >= 0 ? 'pos' : 'neg'}`}>{row.net >= 0 ? '+' : '−'}{fmtN(Math.abs(row.net))}</span>
+                    </div>
+                  ))}
+                  {leaderboard.rank > 10 && (
+                    <div className="lb-row me lb-sep">
+                      <span className="lb-rank">{fmtN(leaderboard.rank)}</span>
+                      <span className="lb-nick">{identity.nick}<em>SEN</em></span>
+                      <span className={`lb-pts ${myNet >= 0 ? 'pos' : 'neg'}`}>{myNet >= 0 ? '+' : '−'}{fmtN(Math.abs(myNet))}</span>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
 
             <div className="recap">
@@ -440,7 +521,7 @@ export default function Ganyan({ online = false }) {
                   <div key={li} className={`recap-row ${res?.correct ? 'ok' : 'fail'}`}>
                     <span className="rr-leg">A{li + 1}</span>
                     <span className="rr-name">{leg.name}</span>
-                    <span className="rr-pick"><i className="silk" style={{ background: myPick.silk }}>{picks[li] + 1}</i>{myPick.name}{res?.donkey && <em className="rr-donkey">EŞEK</em>}</span>
+                    <span className="rr-pick"><i className="silk" style={{ background: myPick.silk }}>{picks[li] + 1}</i>{myPick.name}</span>
                     <span className="rr-arrow">→</span>
                     <span className="rr-win">{winHorse ? winHorse.name : '—'}</span>
                     <span className="rr-mark">{res?.correct ? '✓' : '✕'}</span>
@@ -449,7 +530,10 @@ export default function Ganyan({ online = false }) {
               })}
             </div>
 
-            <button className="btn btn-gold" onClick={newStage}>YENİ ETAP</button>
+            <div className="result-actions">
+              <button className="btn btn-gold" onClick={newStage}>YENİ ETAP</button>
+              {balance <= 0 && <button className="btn btn-ghost" onClick={() => setBalance(START_BAL)}>BAKİYE YÜKLE (1000 TL)</button>}
+            </div>
           </div>
         </section>
       )}
