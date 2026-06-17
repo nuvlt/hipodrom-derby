@@ -639,3 +639,59 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 @media (max-width: 760px) {
   .id-chip { font-size: 11px; padding: 5px 8px; }
 }
+
+/* ==================================================================
+   GANYAN BAHİS / CASHOUT (Faz 1.9)
+   ================================================================== */
+
+/* bakiye çipi (topbar) */
+.bal-chip { display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 1.1; padding: 4px 10px; border-radius: 9px; background: var(--dirt); border: 1px solid var(--line); }
+.bal-lbl { font-size: 8px; letter-spacing: 1px; color: var(--ivory-dim); }
+.bal-chip b { font-family: var(--display); font-weight: 800; font-size: 16px; color: var(--gold); }
+
+/* bahis barı (kupon) */
+.bet-bar { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; background: var(--dirt); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 12px; }
+.bet-stake { flex: 1; min-width: 280px; }
+.stake-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 5px; }
+.stake-input {
+  width: 90px; padding: 7px 9px; border-radius: 8px; background: var(--turf); border: 1px solid var(--line);
+  color: var(--ivory); font-family: var(--display); font-weight: 700; font-size: 15px; text-align: right;
+}
+.stake-input:focus { outline: none; border-color: var(--gold); }
+.bet-pot { text-align: right; display: flex; flex-direction: column; gap: 1px; }
+.pot-mult { font-family: var(--display); font-weight: 700; font-size: 12px; color: var(--ivory-dim); }
+
+/* çarpan rozeti (yarış) */
+.mult-pill { font-family: var(--display); font-weight: 800; font-size: 14px; letter-spacing: .5px; color: var(--gold); border: 1px solid var(--gold); border-radius: 6px; padding: 4px 10px; }
+.mult-pill.dead { color: var(--ivory-dim); border-color: var(--line); }
+
+/* ara ekran aksiyonları + bozdur butonu */
+.gap-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.btn-cash { background: var(--green); color: #06210f; box-shadow: 0 3px 0 #1c5e34; }
+.btn-cash:hover { filter: brightness(1.06); }
+
+/* canlı akış */
+.feed { margin-top: 14px; background: var(--dirt); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; }
+.feed-title { font-family: var(--display); font-weight: 700; font-size: 11px; letter-spacing: 1.5px; color: var(--blood); margin-bottom: 7px; display: flex; align-items: center; gap: 6px; }
+.feed-title::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--blood); animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+.feed-row { font-size: 13px; color: var(--ivory-dim); padding: 2px 0; }
+.feed-row .feed-nick { font-family: var(--display); font-weight: 700; color: var(--ivory); letter-spacing: .5px; }
+.feed-row.cash .feed-nick { color: var(--green); }
+.feed-row.bust .feed-nick { color: var(--blood); }
+
+/* sonuç ekranı ek */
+.gan-score.sm { font-size: 40px; }
+.gan-score.lose { color: var(--ivory-dim); }
+.gan-points em { font-style: normal; color: var(--green); }
+.gan-rank .pos { color: var(--green); }
+.gan-rank .neg { color: var(--blood); }
+.lb-pts.pos { color: var(--green); }
+.lb-pts.neg { color: var(--blood); }
+.result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+@media (max-width: 760px) {
+  .bet-stake { min-width: 0; width: 100%; }
+  .bet-pot { text-align: left; width: 100%; flex-direction: row; gap: 8px; align-items: baseline; }
+  .bal-chip b { font-size: 14px; }
+}
