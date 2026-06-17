@@ -16,8 +16,38 @@ function buildCoupon() {
   return names.map((name, i) => ({ name, dist: DISTANCES[i % DISTANCES.length], lineup: pickGanyanLineup() }))
 }
 
-function legRatings(leg) {
-  return leg.lineup.map((h) => h.genel + (h.form.key === 'formda' ? 4 : h.form.key === 'yukselen' ? 2 : -3))
+function legRatings(leg, theme) {
+  return leg.lineup.map((h) => {
+    const form = h.form.key === 'formda' ? 4 : h.form.key === 'yukselen' ? 2 : -3
+    const surf = ((theme === 'grass' ? h.fg : h.fs) - 82) * 0.7 // zemin (çim/kum formu) oranı etkiler
+    return h.genel + form + surf
+  })
+}
+
+const STREAK_STEP = 5      // her 5 doğru ayakta bir bonus
+const STREAK_BONUS = 50    // sadık oyuncu bonusu (TL)
+
+const BADGES = [
+  { id: 'first', icon: '🎟️', label: 'İlk Adım', desc: 'İlk etabını oyna' },
+  { id: 'cashout', icon: '💰', label: 'Bozdurucu', desc: 'İlk kez bozdur' },
+  { id: 'mult10', icon: '🚀', label: 'Yüksek Uçuş', desc: '10x+ çarpanda kazan' },
+  { id: 'perfect', icon: '🏆', label: 'Tam Kupon', desc: '6/6 tuttur' },
+  { id: 'donkey', icon: '🫏', label: 'Eşek Avcısı', desc: 'Kazanan eşek atı tuttur' },
+  { id: 'streak10', icon: '🔥', label: 'Seri Ustası', desc: '10 ayaklık seri yakala' },
+  { id: 'bigwin', icon: '💎', label: 'Büyük Vurgun', desc: 'Tek seferde 1000+ TL kazan' },
+  { id: 'highroller', icon: '🎰', label: 'Cesur Yürek', desc: '250+ TL bahis yatır' },
+]
+
+function earnedThisStage(ctx) {
+  const e = ['first']
+  if (ctx.settled === 'cashed') e.push('cashout')
+  if ((ctx.settled === 'cashed' || ctx.settled === 'won') && ctx.multiplier >= 10) e.push('mult10')
+  if (ctx.settled === 'won') e.push('perfect')
+  if (ctx.donkeyHit) e.push('donkey')
+  if (ctx.newStreak >= 10) e.push('streak10')
+  if (ctx.payout >= 1000) e.push('bigwin')
+  if (ctx.placedStake >= 250) e.push('highroller')
+  return e
 }
 
 const ls = {
@@ -141,8 +171,13 @@ export default function Ganyan({ online = false }) {
   const [settled, setSettled] = useState('riding') // riding | cashed | busted | won
   const [payout, setPayout] = useState(0)
   const [bestWin, setBestWin] = useState(0)
+  const [cashLeg, setCashLeg] = useState(0)
+  const [badges, setBadges] = useState(() => new Set(JSON.parse(ls.get('hd_badges', '[]'))))
+  const [streak, setStreak] = useState(() => parseInt(ls.get('hd_streak', '0'), 10) || 0)
+  const [showBadges, setShowBadges] = useState(false)
+  const [reward, setReward] = useState(null)
 
-  const fields = useMemo(() => coupon.map((leg) => buildField(legRatings(leg), MODE)), [coupon])
+  const fields = useMemo(() => coupon.map((leg) => buildField(legRatings(leg, theme), MODE)), [coupon, theme])
   const bots = useMemo(() => (online ? genBots(fields, playerCount) : null), [online, fields, playerCount])
 
   const allPicked = picks.every((p) => p !== null)
@@ -219,7 +254,7 @@ export default function Ganyan({ online = false }) {
   function cashOut() {
     if (settled !== 'riding') return
     const win = placedStake * multiplier
-    setSettled('cashed'); setPayout(win); setBalance((b) => b + win); bumpBestWin(win)
+    setSettled('cashed'); setPayout(win); setBalance((b) => b + win); setCashLeg(results.length); bumpBestWin(win)
     sfx.win()
   }
 
@@ -268,6 +303,31 @@ export default function Ganyan({ online = false }) {
   const liveStreak = (() => { let s = 0; for (const r of results) { if (r.correct) s++; else break } return s })()
   const stillAlive = settled === 'riding'
 
+  // etap sonu: seri güncelle + bonus + rozet değerlendir
+  useEffect(() => {
+    if (stage !== 'result') return
+    const legsHit = settled === 'won' ? LEGS : settled === 'cashed' ? cashLeg : liveStreak
+    const prev = parseInt(ls.get('hd_streak', '0'), 10) || 0
+    let newStreak = 0, bonus = 0
+    if (settled !== 'busted') {
+      newStreak = prev + legsHit
+      const milestones = Math.floor(newStreak / STREAK_STEP) - Math.floor(prev / STREAK_STEP)
+      if (milestones > 0) { bonus = milestones * STREAK_BONUS; setBalance((b) => b + bonus) }
+    }
+    ls.set('hd_streak', String(newStreak)); setStreak(newStreak)
+
+    let donkeyHit = false
+    for (let l = 0; l < legsHit; l++) { if (picks[l] === fields[l].donkeyIdx) { donkeyHit = true; break } }
+
+    const earned = earnedThisStage({ settled, multiplier, payout, placedStake, newStreak, donkeyHit })
+    const owned = new Set(JSON.parse(ls.get('hd_badges', '[]')))
+    const fresh = earned.filter((id) => !owned.has(id))
+    fresh.forEach((id) => owned.add(id))
+    ls.set('hd_badges', JSON.stringify([...owned])); setBadges(owned)
+    setReward({ streak: newStreak, bonus, newBadges: fresh })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage])
+
   return (
     <div className="app">
       <header className="topbar">
@@ -282,6 +342,8 @@ export default function Ganyan({ online = false }) {
               <span className="id-dot" />{identity.nick}<span className="id-edit">✎</span>
             </button>
           )}
+          {streak > 0 && <span className="streak-chip" title="Doğru ayak serisi">🔥 {streak}</span>}
+          <button className="icon-btn badge-btn" onClick={() => setShowBadges(true)} title="Rozetler" aria-label="Rozetler">🏅</button>
           <div className="bal-chip"><span className="bal-lbl">BAKİYE</span><b>{fmtN(balance)} TL</b></div>
           <button className={`icon-btn ${muted ? 'muted' : ''}`} onClick={toggleSound} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}>
             {muted ? (
@@ -291,11 +353,28 @@ export default function Ganyan({ online = false }) {
             )}
           </button>
           <div className="theme-toggle" role="group" aria-label="Pist zemini">
-            <button className={theme === 'grass' ? 'active' : ''} onClick={() => setTheme('grass')}>Çim</button>
-            <button className={theme === 'sand' ? 'active' : ''} onClick={() => setTheme('sand')}>Kum</button>
+            <button className={theme === 'grass' ? 'active' : ''} disabled={stage !== 'coupon'} onClick={() => setTheme('grass')}>Çim</button>
+            <button className={theme === 'sand' ? 'active' : ''} disabled={stage !== 'coupon'} onClick={() => setTheme('sand')}>Kum</button>
           </div>
         </div>
       </header>
+
+      {showBadges && (
+        <div className="modal-back" onClick={() => setShowBadges(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head"><span>ROZETLER · {badges.size}/{BADGES.length}</span><button className="modal-x" onClick={() => setShowBadges(false)}>✕</button></div>
+            <div className="badge-grid">
+              {BADGES.map((b) => (
+                <div key={b.id} className={`badge ${badges.has(b.id) ? 'on' : ''}`}>
+                  <span className="badge-ic">{b.icon}</span>
+                  <span className="badge-lb">{b.label}</span>
+                  <span className="badge-ds">{b.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ---------------- KUPON KURMA ---------------- */}
       {stage === 'coupon' && (
@@ -359,6 +438,7 @@ export default function Ganyan({ online = false }) {
                           <span className="form-badge" style={{ '--fc': h.form.color }}>{h.form.label}</span>
                         </span>
                         <span className="gh-stats">HIZ {h.hiz} · GÜÇ {h.guc} · {h.kilo}KG · GENEL {h.genel}</span>
+                        <span className="gh-surface"><b className={theme === 'grass' ? 'on' : ''}>ÇİM {h.fg}</b><b className={theme === 'sand' ? 'on' : ''}>KUM {h.fs}</b></span>
                         {online && bots && (() => {
                           const c = bots.counts[li][hi]; const pct = (c / playerCount) * 100
                           return <span className="gh-share">👥 %{pct >= 1 ? Math.round(pct) : c > 0 ? '<1' : '0'} oyuncu seçti</span>
@@ -467,6 +547,17 @@ export default function Ganyan({ online = false }) {
             {settled === 'busted' && <><div className="gan-score sm lose">ELENDİN</div><div className="gan-points">−{fmtN(placedStake)} TL</div></>}
 
             <div className="gan-best">Bakiye: <b>{fmtN(balance)} TL</b>{online ? ` · Bugünkü en iyi kazanç: ${fmtN(bestWin)} TL` : ''}</div>
+
+            {reward && (
+              <div className="rewards">
+                <span className="rw-streak">🔥 Seri: <b>{reward.streak}</b> ayak{reward.bonus > 0 && <em> · Seri bonusu +{reward.bonus} TL</em>}</span>
+                {reward.newBadges.length > 0 && (
+                  <span className="rw-badges">
+                    Yeni rozet: {reward.newBadges.map((id) => { const bd = BADGES.find((x) => x.id === id); return <i key={id} title={bd.label}>{bd.icon}</i> })}
+                  </span>
+                )}
+              </div>
+            )}
 
             {online && leaderboard && (
               <>
