@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as sfx from './sound'
 import {
-  MODES, BET_TYPES, STEP_NAMES, SILKS, CHIPS, STEP_COLORS, TICK_MS,
+  MODES, BET_TYPES, STEP_NAMES, SILKS, CHIPS, STEP_COLORS, TICK_MS, PLACE_N,
   fmt, pickLineup, buildField, weightedPick, Die, BallBoard, RaceTrack,
 } from './game'
 
@@ -20,8 +20,8 @@ export default function SingleRace() {
   const [selected, setSelected] = useState(null)
   const [bet, setBet] = useState(0)
   const [countdown, setCountdown] = useState(BET_COUNTDOWN)
-  const [positions, setPositions] = useState(Array(7).fill(0))
-  const [lastRolls, setLastRolls] = useState(Array(7).fill(null))
+  const [positions, setPositions] = useState(Array(10).fill(0))
+  const [lastRolls, setLastRolls] = useState(Array(10).fill(null))
   const [winner, setWinner] = useState(null)
   const [order, setOrder] = useState([])
   const [history, setHistory] = useState([])
@@ -71,7 +71,7 @@ export default function SingleRace() {
     setOrder(ord)
     setWinner(win)
     setHistory((h) => [win, ...h].slice(0, 10))
-    const placed = betType === 'kazanan' ? selected === win : ord[0] === selected || ord[1] === selected
+    const placed = betType === 'kazanan' ? selected === win : ord.slice(0, PLACE_N).includes(selected)
     if (placed) {
       setBalance((b) => b + bet * lockedOdds)
       sfx.win()
@@ -111,13 +111,13 @@ export default function SingleRace() {
 
   function startRace() {
     sfx.start()
-    setPositions(Array(7).fill(0)); setLastRolls(Array(7).fill(null))
+    setPositions(Array(10).fill(0)); setLastRolls(Array(10).fill(null))
     setWinner(null); setOrder([]); setTick(0); setRolling(false); setPhase('racing')
   }
 
   function newRound() {
     setLineup(pickLineup())
-    setPositions(Array(7).fill(0)); setLastRolls(Array(7).fill(null))
+    setPositions(Array(10).fill(0)); setLastRolls(Array(10).fill(null))
     setWinner(null); setOrder([]); setSelected(null); setBet(0); setPhase('betting')
     if (balance <= 0) setBalance(START_BALANCE)
   }
@@ -130,7 +130,7 @@ export default function SingleRace() {
   }
 
   const winBet = betType === 'kazanan'
-  const placedWin = winner !== null && (winBet ? winner === selected : order[0] === selected || order[1] === selected)
+  const placedWin = winner !== null && (winBet ? winner === selected : order.slice(0, PLACE_N).includes(selected))
   const myRank = selected !== null && order.length ? order.indexOf(selected) + 1 : null
   const max = Math.max(...positions)
   const leaderIdx = max === 0 ? null : positions.indexOf(max)
@@ -195,6 +195,7 @@ export default function SingleRace() {
               <div className="podium">
                 <span className="pod pod-1"><b>1.</b> {lineup[order[0]].name}</span>
                 <span className="pod pod-2"><b>2.</b> {lineup[order[1]].name}</span>
+                <span className="pod pod-3"><b>3.</b> {lineup[order[2]].name}</span>
               </div>
               {selected !== null && (
                 <div className="result-payline">
@@ -306,8 +307,8 @@ export default function SingleRace() {
       </div>
 
       <p className="fineprint">
-        7 at · Her atın oranı gerçek kazanma şansına göre belirlenir (zemin ve form etkiler) ·
-        Tüm bahislerde teorik RTP %92.9 · Eşek at: en düşük şanslı at, en yüksek oran · Demo kredisi gerçek para değildir.
+        10 at · Her atın oranı gerçek kazanma şansına göre belirlenir (zemin ve form etkiler) ·
+        Plase: ilk 3 · Tüm bahislerde teorik RTP %92.9 · Demo kredisi gerçek para değildir.
       </p>
     </div>
   )
