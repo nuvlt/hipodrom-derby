@@ -123,8 +123,6 @@ export default function Ganyan({ online = false }) {
   const [theme, setTheme] = useState('grass')
   const [muted, setMutedState] = useState(false)
   const [coupon, setCoupon] = useState(() => buildCoupon())
-  const [revealed, setRevealed] = useState(false)
-  const [spinning, setSpinning] = useState(false)
   const [picks, setPicks] = useState(Array(LEGS).fill(null))
   const [activeLeg, setActiveLeg] = useState(0)
   const [legIndex, setLegIndex] = useState(0)
@@ -169,14 +167,8 @@ export default function Ganyan({ online = false }) {
     else setStage('result')
   }
 
-  function spinWheel() {
-    if (spinning || revealed) return
-    sfx.start(); setSpinning(true)
-    setTimeout(() => { setSpinning(false); setRevealed(true) }, 1700)
-  }
-
   function pick(leg, idx) {
-    if (stage !== 'coupon' || !revealed) return
+    if (stage !== 'coupon') return
     sfx.tick()
     setPicks((p) => { const n = [...p]; n[leg] = idx; return n })
     if (leg < LEGS - 1) setTimeout(() => setActiveLeg(leg + 1), 260)
@@ -242,7 +234,6 @@ export default function Ganyan({ online = false }) {
 
   function newStage() {
     setCoupon(buildCoupon())
-    setRevealed(false); setSpinning(false)
     setPicks(Array(LEGS).fill(null)); setActiveLeg(0)
     setLegIndex(0); setBetween(false); setGap(GAP_SEC); setResults([]); setFeed([])
     setPlayerCount(400 + Math.floor(Math.random() * 1600))
@@ -311,43 +302,33 @@ export default function Ganyan({ online = false }) {
         <>
           <div className="gan-bar">
             <div className="gan-bar-left">
-              <div className="form-wheel-wrap">
-                <div className={`form-wheel ${spinning ? 'spin' : ''}`} />
-                <div className="form-wheel-pin" />
-              </div>
               <div>
-                <div className="gan-bar-title">{revealed ? 'FORMLAR BELİRLENDİ' : 'FORM ÇARKI'}</div>
-                <div className="gan-bar-sub">{online ? `👥 ${fmtN(playerCount)} oyuncu bu etapta` : revealed ? 'Her ayaktan bir at seç' : 'Atların formunu çark belirler'}</div>
+                <div className="gan-bar-title">KUPONUNU KUR</div>
+                <div className="gan-bar-sub">{online ? `👥 ${fmtN(playerCount)} oyuncu bu etapta` : 'Her ayaktan bir at seç'}</div>
               </div>
             </div>
             <div className="gan-bar-right">
-              {!revealed ? (
-                <button className="btn btn-gold" onClick={spinWheel} disabled={spinning}>{spinning ? 'ÇEVRİLİYOR…' : 'ÇARKI ÇEVİR'}</button>
-              ) : (
-                <button className="btn btn-gold" disabled={!canPlay} onClick={playCoupon}>
-                  {!allPicked ? `${picks.filter((p) => p !== null).length}/6 SEÇ` : stake <= 0 ? 'BAHİS GİR' : stake > balance ? 'BAKİYE YETMİYOR' : `OYNA · ${fmtN(stake)} TL`}
-                </button>
-              )}
+              <button className="btn btn-gold" disabled={!canPlay} onClick={playCoupon}>
+                {!allPicked ? `${picks.filter((p) => p !== null).length}/6 SEÇ` : stake <= 0 ? 'BAHİS GİR' : stake > balance ? 'BAKİYE YETMİYOR' : `OYNA · ${fmtN(stake)} TL`}
+              </button>
             </div>
           </div>
 
-          {revealed && (
-            <div className="bet-bar">
-              <div className="bet-stake">
-                <span className="bs-label">BAHİS (TL)</span>
-                <div className="stake-row">
-                  {CHIPS.map((c) => (<button key={c} className="chip" onClick={() => addChip(c)}>+{c}</button>))}
-                  <button className="chip chip-clear" disabled={stake === 0} onClick={() => setStake(0)}>SİL</button>
-                  <input className="stake-input" type="number" min="0" value={stake || ''} onChange={(e) => setCustom(e.target.value)} placeholder="0" />
-                </div>
-              </div>
-              <div className="bet-pot">
-                <span className="bs-label">TÜM AYAKLAR TUTARSA</span>
-                <span className="bs-value gold">{allPicked && stake > 0 ? `${fmtN(stake * potential)} TL` : '—'}</span>
-                {allPicked && <span className="pot-mult">{potential.toFixed(2)}x</span>}
+          <div className="bet-bar">
+            <div className="bet-stake">
+              <span className="bs-label">BAHİS (TL)</span>
+              <div className="stake-row">
+                {CHIPS.map((c) => (<button key={c} className="chip" onClick={() => addChip(c)}>+{c}</button>))}
+                <button className="chip chip-clear" disabled={stake === 0} onClick={() => setStake(0)}>SİL</button>
+                <input className="stake-input" type="number" min="0" value={stake || ''} onChange={(e) => setCustom(e.target.value)} placeholder="0" />
               </div>
             </div>
-          )}
+            <div className="bet-pot">
+              <span className="bs-label">TÜM AYAKLAR TUTARSA</span>
+              <span className="bs-value gold">{allPicked && stake > 0 ? `${fmtN(stake * potential)} TL` : '—'}</span>
+              {allPicked && <span className="pot-mult">{potential.toFixed(2)}x</span>}
+            </div>
+          </div>
 
           <div className="leg-tabs" role="tablist">
             {coupon.map((leg, li) => (
@@ -370,25 +351,23 @@ export default function Ganyan({ online = false }) {
                 </div>
                 <div className="gan-horses">
                   {leg.lineup.map((h, hi) => (
-                    <button key={hi} className={`gan-horse ${picks[li] === hi ? 'sel' : ''}`} disabled={!revealed} onClick={() => pick(li, hi)}>
+                    <button key={hi} className={`gan-horse ${picks[li] === hi ? 'sel' : ''}`} onClick={() => pick(li, hi)}>
                       <span className="silk" style={{ background: h.silk }}>{hi + 1}</span>
                       <span className="gh-main">
                         <span className="gh-top">
                           <span className="hname">{h.name}</span>
-                          {revealed && <span className="form-badge" style={{ '--fc': h.form.color }}>{h.form.label}</span>}
+                          <span className="form-badge" style={{ '--fc': h.form.color }}>{h.form.label}</span>
                         </span>
                         <span className="gh-stats">HIZ {h.hiz} · GÜÇ {h.guc} · {h.kilo}KG · GENEL {h.genel}</span>
-                        {online && revealed && bots && (() => {
+                        {online && bots && (() => {
                           const c = bots.counts[li][hi]; const pct = (c / playerCount) * 100
                           return <span className="gh-share">👥 %{pct >= 1 ? Math.round(pct) : c > 0 ? '<1' : '0'} oyuncu seçti</span>
                         })()}
                       </span>
-                      {revealed && (
-                        <span className="gh-odds">
-                          <b>{fields[li].oddsWin[hi].toFixed(2)}<small>x</small></b>
-                          {fields[li].donkeyIdx === hi && <em className="donkey-tag">EŞEK</em>}
-                        </span>
-                      )}
+                      <span className="gh-odds">
+                        <b>{fields[li].oddsWin[hi].toFixed(2)}<small>x</small></b>
+                        {fields[li].donkeyIdx === hi && <em className="donkey-tag">EŞEK</em>}
+                      </span>
                       {picks[li] === hi && <span className="gh-check">✓</span>}
                     </button>
                   ))}
