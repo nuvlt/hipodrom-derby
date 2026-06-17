@@ -184,19 +184,37 @@ export function weightedIndex(weights) {
   return weights.length - 1
 }
 
-/* botların kupon seçimleri: her ayakta oranlara göre ağırlıklı (favori daha çok seçilir) */
+/* tek bir yarışı sonuna kadar koştur, sıralamayı döndür (anlık simülasyon) */
+export function raceOnce(weights, mode) {
+  const n = weights.length
+  const pos = Array(n).fill(0)
+  while (!pos.some((p) => p >= mode.track)) {
+    for (let i = 0; i < n; i++) pos[i] += weightedPick(mode.faces, weights[i])
+  }
+  return rankOrder(pos)
+}
+
+/* botların kupon seçimleri + bahisleri (online) */
 export function genBots(fields, count) {
   const nLegs = fields.length
   const n = fields[0].pWin.length
   const wPerLeg = fields.map((f) => f.pWin.map((p) => Math.pow(p, 0.85) + 0.03))
+  const stakeOpts = [10, 10, 25, 25, 25, 50, 50, 100, 250]
+  const targetW = [0, 0.12, 0.22, 0.24, 0.20, 0.12, 0.10] // index = bozdurma hedefi (1..6 ayak)
   const picks = new Array(count)
   const counts = fields.map(() => new Array(n).fill(0))
+  const stakes = new Array(count)
+  const targets = new Array(count)
   for (let b = 0; b < count; b++) {
     const pk = new Array(nLegs)
     for (let l = 0; l < nLegs; l++) { const h = weightedIndex(wPerLeg[l]); pk[l] = h; counts[l][h]++ }
     picks[b] = pk
+    stakes[b] = stakeOpts[Math.floor(Math.random() * stakeOpts.length)]
+    let r = Math.random(), T = 1
+    for (let t = 1; t <= 6; t++) { r -= targetW[t]; if (r <= 0) { T = t; break } }
+    targets[b] = T
   }
-  return { picks, counts }
+  return { picks, counts, stakes, targets }
 }
 
 /* ------------------------------------------------------------------ */
