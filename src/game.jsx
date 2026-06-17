@@ -4,10 +4,11 @@
    ================================================================== */
 
 export const TICK_MS = 880
+export const PLACE_N = 3 // 10 atta plase = ilk 3
 
 export const BET_TYPES = {
   kazanan: { key: 'kazanan', label: 'Kazanan', hint: '1. gelsin', payout: 6.5 },
-  plase: { key: 'plase', label: 'Plase', hint: 'İlk 2', payout: 3.25 },
+  plase: { key: 'plase', label: 'Plase', hint: 'İlk 3', payout: 3.25 },
 }
 
 export const MODES = {
@@ -19,7 +20,7 @@ export const MODES = {
 export const HOLE_COLORS = { 1: '#3D7BE8', 2: '#29B8C9', 3: '#2EC27E', 4: '#F2742C', 5: '#E2484A' }
 export const STEP_COLORS = { 1: '#3D7BE8', 2: '#E8B64C', 3: '#E2484A' }
 export const STEP_NAMES = { 1: 'MAVİ', 2: 'SARI', 3: 'KIRMIZI' }
-export const SILKS = ['#E2484A', '#3D7BE8', '#E8B64C', '#9B5DE5', '#2EC27E', '#F2742C', '#29B8C9']
+export const SILKS = ['#E2484A', '#3D7BE8', '#E8B64C', '#9B5DE5', '#2EC27E', '#F2742C', '#29B8C9', '#E255A0', '#5C6BC0', '#9CCC4E']
 export const CHIPS = [10, 25, 50, 100, 250]
 
 const ROSTER = [
@@ -37,54 +38,17 @@ const ROSTER = [
   { name: 'ATEŞ', fg: 84, fs: 81 }, { name: 'TOROS', fg: 80, fs: 87 },
 ]
 
-/* ganyan için ek veriler */
-export const RACE_NAMES = [
-  'Bahar Kupası', 'Altın Sprint', 'Şampiyonlar Koşusu', 'Gazi Koşusu',
-  'Cumhuriyet Kupası', 'Zafer Koşusu', 'Anadolu Derbisi', 'Boğaziçi Kupası',
-  'İnci Sprint', 'Yıldızlar Geçidi', 'Ankara Koşusu', 'Fatih Kupası',
-]
-export const DISTANCES = ['1200m', '1400m', '1600m', '2000m', '1000m', '1800m']
-
-export const FORM_STATES = [
-  { key: 'formda', label: 'Formda', color: '#2EC27E' },
-  { key: 'yukselen', label: 'Yükselen', color: '#E8B64C' },
-  { key: 'formsuz', label: 'Formsuz', color: '#E2484A' },
-]
-
 export const fmt = (n) => n.toLocaleString('tr-TR', { maximumFractionDigits: 2, minimumFractionDigits: 0 })
 export const rollFace = (faces) => faces[Math.floor(Math.random() * faces.length)]
-const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1))
 
-/* 24 attan 7'sini rastgele seç, kulvar rengini ata */
+/* 24 attan 10'unu rastgele seç, kulvar rengini ata */
 export function pickLineup() {
   const arr = [...ROSTER]
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[arr[i], arr[j]] = [arr[j], arr[i]]
   }
-  return arr.slice(0, 7).map((h, i) => ({ ...h, silk: SILKS[i] }))
-}
-
-/* ganyan kadrosu: kozmetik istatistikler + form durumu ekli (sonucu etkilemez) */
-export function pickGanyanLineup() {
-  return pickLineup().map((h) => {
-    const hiz = rnd(74, 95)
-    const guc = rnd(62, 90)
-    const kilo = rnd(52, 60)
-    const genel = Math.round((hiz + guc) / 2)
-    const form = FORM_STATES[Math.floor(Math.random() * FORM_STATES.length)]
-    return { ...h, hiz, guc, kilo, genel, form }
-  })
-}
-
-/* dizilişten n farklı eleman seç */
-export function pickNames(n) {
-  const arr = [...RACE_NAMES]
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr.slice(0, n)
+  return arr.slice(0, 10).map((h, i) => ({ ...h, silk: SILKS[i] }))
 }
 
 /* bitiş anındaki konumlara göre sıralama; eşitlik rastgele çözülür (simetri korunur) */
@@ -129,11 +93,11 @@ export function drivesFromRatings(ratings, K = DRIVE_K) {
   return ratings.map((r) => K * (r - m) / 8)
 }
 
-/* Monte Carlo: alanın kazanma ve ilk-2 olasılıkları (canlı yarışla aynı mekanik) */
+/* Monte Carlo: kazanma ve plase (ilk 3) olasılıkları (canlı yarışla aynı mekanik) */
 export function simulateField(weightsPerHorse, faces, trackLen, N = 3000) {
   const n = weightsPerHorse.length
   const wins = Array(n).fill(0)
-  const top2 = Array(n).fill(0)
+  const place = Array(n).fill(0)
   for (let s = 0; s < N; s++) {
     const pos = Array(n).fill(0)
     while (!pos.some((p) => p >= trackLen)) {
@@ -141,9 +105,9 @@ export function simulateField(weightsPerHorse, faces, trackLen, N = 3000) {
     }
     const ord = rankOrder(pos)
     wins[ord[0]]++
-    top2[ord[0]]++; top2[ord[1]]++
+    for (let k = 0; k < PLACE_N; k++) place[ord[k]]++
   }
-  return { pWin: wins.map((w) => w / N), pTop2: top2.map((t) => t / N) }
+  return { pWin: wins.map((w) => w / N), pPlace: place.map((t) => t / N) }
 }
 
 export function oddsFromProb(p, target = TARGET_RTP, cap = 99) {
@@ -151,70 +115,16 @@ export function oddsFromProb(p, target = TARGET_RTP, cap = 99) {
   return Math.min(cap, Math.max(1.05, (1 / p) * target))
 }
 
-/* alanı kur: ratingler + mod → drive, ağırlık, olasılık, oran, eşek at */
+/* alanı kur: ratingler + mod → drive, ağırlık, olasılık, oran */
 export function buildField(ratings, mode, N = 3000) {
   const drives = drivesFromRatings(ratings)
   const weights = drives.map((d) => faceWeights(mode.faces, d))
-  const { pWin, pTop2 } = simulateField(weights, mode.faces, mode.track, N)
+  const { pWin, pPlace } = simulateField(weights, mode.faces, mode.track, N)
   const oddsWin = pWin.map((p) => oddsFromProb(p))
-  const oddsPlase = pTop2.map((p) => oddsFromProb(p))
+  const oddsPlase = pPlace.map((p) => oddsFromProb(p))
   let donkeyIdx = 0
   for (let i = 1; i < pWin.length; i++) if (pWin[i] < pWin[donkeyIdx]) donkeyIdx = i
-  return { drives, weights, pWin, pTop2, oddsWin, oddsPlase, donkeyIdx }
-}
-
-/* ==================================================================
-   SİMÜLE ÇOK OYUNCULU (Faz 1.8 — botlarla UX prototipi, client-side)
-   ================================================================== */
-
-export const NICK_POOL = [
-  'AtSever', 'Jokey', 'Ganyancı', 'Sprint', 'Fotofiniş', 'Doludizgin', 'Koşucu',
-  'Şahbaz', 'Rüzgâr', 'Nalbant', 'Şanslı', 'Bahisçi', 'PistKralı', 'Derbi',
-  'Gözde', 'Favori', 'Sürpriz', 'Tabela', 'KuponCanavarı', 'Handikap', 'Apranti',
-  'Safkan', 'Eşekçi', 'Üçlübir', 'Altılı', 'Çıkış', 'Düzlük', 'Viraj', 'Start',
-]
-
-export function botNick(i) {
-  return NICK_POOL[i % NICK_POOL.length] + (10 + (i * 37) % 990)
-}
-
-export function weightedIndex(weights) {
-  let r = Math.random() * weights.reduce((a, b) => a + b, 0)
-  for (let i = 0; i < weights.length; i++) { r -= weights[i]; if (r <= 0) return i }
-  return weights.length - 1
-}
-
-/* tek bir yarışı sonuna kadar koştur, sıralamayı döndür (anlık simülasyon) */
-export function raceOnce(weights, mode) {
-  const n = weights.length
-  const pos = Array(n).fill(0)
-  while (!pos.some((p) => p >= mode.track)) {
-    for (let i = 0; i < n; i++) pos[i] += weightedPick(mode.faces, weights[i])
-  }
-  return rankOrder(pos)
-}
-
-/* botların kupon seçimleri + bahisleri (online) */
-export function genBots(fields, count) {
-  const nLegs = fields.length
-  const n = fields[0].pWin.length
-  const wPerLeg = fields.map((f) => f.pWin.map((p) => Math.pow(p, 0.85) + 0.03))
-  const stakeOpts = [10, 10, 25, 25, 25, 50, 50, 100, 250]
-  const targetW = [0, 0.12, 0.22, 0.24, 0.20, 0.12, 0.10] // index = bozdurma hedefi (1..6 ayak)
-  const picks = new Array(count)
-  const counts = fields.map(() => new Array(n).fill(0))
-  const stakes = new Array(count)
-  const targets = new Array(count)
-  for (let b = 0; b < count; b++) {
-    const pk = new Array(nLegs)
-    for (let l = 0; l < nLegs; l++) { const h = weightedIndex(wPerLeg[l]); pk[l] = h; counts[l][h]++ }
-    picks[b] = pk
-    stakes[b] = stakeOpts[Math.floor(Math.random() * stakeOpts.length)]
-    let r = Math.random(), T = 1
-    for (let t = 1; t <= 6; t++) { r -= targetW[t]; if (r <= 0) { T = t; break } }
-    targets[b] = T
-  }
-  return { picks, counts, stakes, targets }
+  return { drives, weights, pWin, pPlace, oddsWin, oddsPlase, donkeyIdx }
 }
 
 /* ------------------------------------------------------------------ */
