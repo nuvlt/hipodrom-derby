@@ -732,3 +732,52 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .badge-ds { font-size: 10px; color: var(--ivory-dim); }
 
 @media (max-width: 760px) { .streak-chip { font-size: 12px; padding: 3px 8px; } }
+
+/* ==================================================================
+   ŞİMŞEK + ÇOKLU BAHİS (Faz 2.0 — tek oyun)
+   ================================================================== */
+
+/* pist üstü şimşek alanı */
+.sky { position: relative; height: 26px; margin-bottom: 7px; border-radius: 9px; overflow: hidden; display: flex; align-items: center; background: linear-gradient(180deg, #0b1330, #161f3c); border: 1px solid #283358; }
+.sky-label { font-family: var(--display); font-weight: 700; font-size: 10px; letter-spacing: 2.5px; color: #6f80c0; padding-left: 11px; }
+.sky-flash { animation: skyflash .55s ease; }
+@keyframes skyflash { 0% { background: #243a8a; } 25% { background: #6076e0; } 100% { background: linear-gradient(180deg, #0b1330, #161f3c); } }
+.sky-bolt { position: absolute; top: -3px; font-size: 22px; filter: drop-shadow(0 0 7px #b7c2ff); animation: boltdrop .55s ease; }
+@keyframes boltdrop { 0% { transform: translateY(-12px) scale(.5) rotate(-8deg); opacity: 0; } 40% { transform: translateY(2px) scale(1.25) rotate(4deg); opacity: 1; } 100% { transform: translateY(4px) scale(1); opacity: .85; } }
+
+/* atın üstündeki çarpan rozeti */
+.lit-badge { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-family: var(--display); font-weight: 800; font-size: 11px; color: #fff; background: linear-gradient(180deg, #6f7ee6, #3a48b4); border: 1px solid #aeb9ff; border-radius: 999px; padding: 1px 7px; white-space: nowrap; box-shadow: 0 0 9px rgba(130,150,255,.6); z-index: 4; }
+.lit-badge.flash { animation: litflash .55s ease; }
+@keyframes litflash { 0% { transform: translateX(-50%) scale(1); } 40% { transform: translateX(-50%) scale(1.55); box-shadow: 0 0 18px #d2daff; } 100% { transform: translateX(-50%) scale(1); } }
+.lit-mini { color: #9fb0ff; font-family: var(--display); font-weight: 800; }
+
+/* 3'lü bahis türü */
+.seg3 button { flex: 1; padding-left: 4px; padding-right: 4px; }
+
+/* fişe ekle butonu */
+.btn-add { width: 100%; margin-top: 8px; background: var(--dirt); border: 1px solid var(--gold); color: var(--gold); font-family: var(--display); font-weight: 700; letter-spacing: .5px; padding: 9px; border-radius: 10px; font-size: 13px; }
+.btn-add:hover:not(:disabled) { background: rgba(232,182,76,.1); }
+.btn-add:disabled { opacity: .5; cursor: not-allowed; }
+
+/* bahis fişi */
+.slip-label { margin-top: 13px; }
+.slip-empty { font-size: 12px; color: var(--ivory-dim); padding: 6px 2px 8px; }
+.slip { display: flex; flex-direction: column; gap: 5px; margin-bottom: 9px; }
+.slip-row { display: grid; grid-template-columns: 20px 1fr auto auto auto 20px; align-items: center; gap: 8px; font-size: 13px; padding: 5px 8px; border-radius: 8px; background: rgba(255,255,255,.03); }
+.sr-silk { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 800; font-size: 11px; color: #fff; }
+.sr-name { font-family: var(--display); font-weight: 600; letter-spacing: .3px; }
+.sr-type { font-size: 11px; color: var(--ivory-dim); }
+.sr-amt { font-variant-numeric: tabular-nums; color: var(--ivory-dim); }
+.sr-pot { font-family: var(--display); font-weight: 700; color: var(--gold); font-size: 12px; }
+.sr-x { color: var(--ivory-dim); width: 18px; height: 18px; border-radius: 5px; font-size: 11px; }
+.sr-x:hover { background: rgba(226,72,74,.15); color: var(--blood); }
+.mybet-tag { font-style: normal; font-size: 9px; font-weight: 800; background: var(--gold); color: var(--turf); padding: 1px 5px; border-radius: 999px; margin-left: 6px; }
+
+/* sonuç ekranı bahis dökümü */
+.slip-results { display: flex; flex-direction: column; gap: 5px; width: 100%; max-width: 400px; margin: 8px auto 6px; }
+.sr-row { display: grid; grid-template-columns: 20px 1fr auto auto auto; align-items: center; gap: 8px; font-size: 13px; padding: 5px 9px; border-radius: 8px; }
+.sr-row.ok { background: rgba(46,194,126,.13); }
+.sr-row.no { background: rgba(255,255,255,.03); opacity: .65; }
+.sr-win { font-family: var(--display); font-weight: 800; }
+.sr-row.ok .sr-win { color: var(--green); }
+.sr-row.no .sr-win { color: var(--ivory-dim); }
