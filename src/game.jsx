@@ -258,41 +258,9 @@ export function RaceTrack({ theme, lineup, positions, trackLen, modeKey, lastRol
   return (
     <div className={`track theme-${theme}`}>
       <div className={`sky ${struck ? 'sky-flash' : ''}`} key={struck ? `sky${struck.id}` : 'sky'}>
-        <svg className="cloud-defs" width="0" height="0" aria-hidden="true">
-          <defs>
-            <linearGradient id="cmBody" x1="0" y1="16" x2="0" y2="84" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor="#909ed3" />
-              <stop offset="0.5" stopColor="#4b577f" />
-              <stop offset="1" stopColor="#212a4b" />
-            </linearGradient>
-            <radialGradient id="cmHi" cx="84" cy="34" r="50" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor="#d4ddf8" stopOpacity="0.95" />
-              <stop offset="0.55" stopColor="#aab6e6" stopOpacity="0.18" />
-              <stop offset="1" stopColor="#aab6e6" stopOpacity="0" />
-            </radialGradient>
-            <filter id="cmGoo" x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="3.4" result="b" />
-              <feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10" result="g" />
-              <feComposite in="SourceGraphic" in2="g" operator="atop" />
-            </filter>
-          </defs>
-        </svg>
-        <svg className="cloud cloud-far" viewBox="0 0 200 90" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-          <g filter="url(#cmGoo)" fill="#2c3658">
-            <ellipse cx="100" cy="64" rx="52" ry="14" />
-            <circle cx="68" cy="56" r="18" /><circle cx="104" cy="50" r="22" /><circle cx="136" cy="56" r="17" />
-            <circle cx="92" cy="46" r="15" />
-          </g>
-        </svg>
-        <svg className="cloud cloud-main" viewBox="0 0 200 90" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-          <g filter="url(#cmGoo)" fill="url(#cmBody)">
-            <ellipse cx="100" cy="68" rx="60" ry="15" />
-            <circle cx="58" cy="56" r="24" /><circle cx="100" cy="47" r="31" /><circle cx="144" cy="56" r="24" />
-            <circle cx="80" cy="41" r="20" /><circle cx="122" cy="43" r="20" />
-          </g>
-          <g filter="url(#cmGoo)" fill="url(#cmHi)">
-            <circle cx="80" cy="37" r="17" /><circle cx="110" cy="39" r="13" /><circle cx="60" cy="46" r="10" />
-          </g>
+        <svg className="cloud cloud-main" viewBox="2 16 122 92" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <path d="M23.45 62.3c.72-.72-1.27-9.29 7.6-15.91s14.92-2.67 15.77-2.96c.84-.28 4.79-17.6 21.4-22.1s33.93 3.94 38.01 18.02c3.73 12.87.84 21.54 1.27 22.1c.42.56 8.45.28 13.09 7.74s2.96 12.11 2.96 12.11l-29.56 9.15h-47.3S5.02 79.47 4.6 77.5c-.42-1.97.53-8.37 7.32-12.25c5.9-3.37 10.26-1.68 11.53-2.95z" fill="#e4eaee" />
+          <path d="M35.16 92.84s-15.78 3.3-26.45-4.96C2.29 82.9 4.63 74.83 4.63 74.83s4.6 4.65 13.89 5.91c9.29 1.27 19.71.84 19.71.84s2.6 4.44 12.39 6.48c12.27 2.55 18.74-3.73 18.74-3.73s3.36 4.02 15.19 4.3c11.83.28 18.46-7.98 19.57-8.17c.56-.09 3.82 2.87 10.28 1.83c6.15-.99 9.39-3.66 9.39-3.66s.89 6.62-5.3 10.7c-4.83 3.18-13.23 3.52-13.23 3.52s-1.28 4.91-7.05 8.48c-5.36 3.33-14.6 4.44-21.44 2.4c-8.59-2.56-10.72-6.47-10.72-6.47s-6.4 3.75-16.4 2.48c-9.45-1.18-14.49-6.9-14.49-6.9z" fill="#bacdd2" />
         </svg>
         <span className="sky-label">⚡ ŞİMŞEK ALANI</span>
       </div>
