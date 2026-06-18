@@ -9,6 +9,7 @@ export const PLACE_N = 3 // 10 atta plase = ilk 3
 export const BET_TYPES = {
   kazanan: { key: 'kazanan', label: 'Kazanan', hint: '1. gelsin', payout: 6.5 },
   plase: { key: 'plase', label: 'Plase', hint: 'İlk 3', payout: 3.25 },
+  simsek: { key: 'simsek', label: 'Şimşek', hint: 'Çarpan yakala', payout: 0 },
 }
 
 export const MODES = {
@@ -115,6 +116,36 @@ export function oddsFromProb(p, target = TARGET_RTP, cap = 99) {
   return Math.min(cap, Math.max(1.05, (1 / p) * target))
 }
 
+/* ==================================================================
+   ŞİMŞEK ÇARPANI (konumdan bağımsız bahis) — RTP %92.9'a kalibreli
+   Yarış boyunca ~2-6 çarpma rastgele atlara düşer; ilk çarpma "base",
+   sonrakiler çarpımsal büyütür; tavan 1000x. Monte Carlo ile her atın
+   ortalama ödemesi = 0.929 olacak şekilde ayarlandı.
+   ================================================================== */
+export const LIGHTNING_CAP = 1000
+const LB = {
+  Kv: [2, 3, 4, 5, 6], Kw: [0.255, 0.34, 0.23, 0.115, 0.06],
+  Bv: [2, 3, 4, 5], Bw: [0.525, 0.29, 0.125, 0.06],
+  Fv: [1.5, 2, 2.5, 3, 4], Fw: [0.43, 0.315, 0.145, 0.08, 0.03],
+}
+function wsel(items, weights) {
+  let r = Math.random() * weights.reduce((a, b) => a + b, 0)
+  for (let i = 0; i < items.length; i++) { r -= weights[i]; if (r <= 0) return items[i] }
+  return items[items.length - 1]
+}
+export function genLightning(n = 10) {
+  const K = wsel(LB.Kv, LB.Kw)
+  const times = Array.from({ length: K }, () => 0.06 + Math.random() * 0.82).sort((a, b) => a - b)
+  const M = Array(n).fill(0)
+  const strikes = times.map((t) => {
+    const horse = Math.floor(Math.random() * n)
+    if (M[horse] === 0) M[horse] = wsel(LB.Bv, LB.Bw)
+    else M[horse] = Math.min(LIGHTNING_CAP, +(M[horse] * wsel(LB.Fv, LB.Fw)).toFixed(2))
+    return { horse, atProgress: t, M: M[horse] }
+  })
+  return { strikes, finalM: M.slice() }
+}
+
 /* alanı kur: ratingler + mod → drive, ağırlık, olasılık, oran */
 export function buildField(ratings, mode, N = 3000) {
   const drives = drivesFromRatings(ratings)
@@ -212,17 +243,23 @@ export function BallBoard({ holes, value, tick, auto, disabled, done, onThrow })
 /*  PİST — kulvarlar + atlar (her iki mod da kullanır)                 */
 /* ------------------------------------------------------------------ */
 
-export function RaceTrack({ theme, lineup, positions, trackLen, modeKey, lastRolls, tick, mineIdx, winnerIdx, placeIdx, running }) {
+export function RaceTrack({ theme, lineup, positions, trackLen, modeKey, lastRolls, tick, mineIdxs = [], winnerIdx, placeIdxs = [], lightM = [], struck, running }) {
   return (
     <div className={`track theme-${theme}`}>
+      <div className={`sky ${struck ? 'sky-flash' : ''}`} key={struck ? `s${struck.id}` : 'none'}>
+        <span className="sky-label">⚡ ŞİMŞEK ALANI</span>
+        {struck && <span className="sky-bolt" style={{ left: `${8 + struck.horse * 8.2}%` }}>⚡</span>}
+      </div>
       {lineup.map((h, i) => {
         const pct = Math.min(positions[i] / trackLen, 1)
+        const m = lightM[i] || 0
         return (
-          <div key={i} className={`lane ${mineIdx === i ? 'lane-mine' : ''} ${winnerIdx === i ? 'lane-winner' : ''} ${placeIdx === i ? 'lane-place' : ''}`}>
+          <div key={i} className={`lane ${mineIdxs.includes(i) ? 'lane-mine' : ''} ${winnerIdx === i ? 'lane-winner' : ''} ${placeIdxs.includes(i) ? 'lane-place' : ''}`}>
             <div className="lane-no" style={{ background: h.silk }}>{i + 1}</div>
             <div className="lane-run">
               <div className="lane-marks"><i /><i /><i /></div>
               <div className="runner" style={{ '--p': pct }}>
+                {m > 0 && <span className={`lit-badge ${struck && struck.horse === i ? 'flash' : ''}`}>⚡{m}x</span>}
                 <Horse silk={h.silk} number={i + 1} running={running} won={winnerIdx === i} />
                 {running && lastRolls[i] && (
                   <span className="roll-pop" key={tick} style={{ background: modeKey === 'renk' ? STEP_COLORS[lastRolls[i]] : 'var(--ivory)', color: modeKey === 'renk' ? '#fff' : '#1b1b1b' }}>+{lastRolls[i]}</span>
