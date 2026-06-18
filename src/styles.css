@@ -812,3 +812,30 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 /* sonuçta şimşekli kazanç rozeti */
 .boost-tag { font-style: normal; margin-left: 6px; font-weight: 800; color: #aeb9ff; }
 .sr-row.boost { background: linear-gradient(90deg, rgba(120,140,255,.16), rgba(46,194,126,.13)); border: 1px solid rgba(150,170,255,.4); }
+
+/* ==================================================================
+   FAZ 2.2 — profesyonel bulut + değişken çarpan + bitiş çarpan tablosu
+   ================================================================== */
+/* katmanlı (cel-shade) bulut */
+.sky .cloud { position: absolute; width: 176px; height: 60px; top: -7px; }
+.cloud-main { left: 50%; transform: translateX(-50%); filter: drop-shadow(0 5px 6px rgba(0,0,0,.5)); z-index: 1; }
+.cloud-far { left: 33%; transform: translateX(-50%) scale(.66); opacity: .4; top: -2px; z-index: 0; }
+.sky .cloud .cl-shadow ellipse { fill: #161d34; }
+.sky .cloud .cl-body ellipse { fill: #36426a; }
+.sky .cloud .cl-light ellipse { fill: #5d6aaa; opacity: .92; }
+.sky-flash { animation: skyflash .5s ease; }
+.sky-flash .cloud { animation: cloudlit .5s ease; }
+@keyframes cloudlit { 0% { filter: brightness(1); } 14% { filter: brightness(2.7) drop-shadow(0 0 11px #bcc8ff); } 100% { filter: brightness(1); } }
+
+/* 1'in altı çarpan = sönük/gri rozet (kazandırmayabilir) */
+.lit-badge.low { background: linear-gradient(180deg, #6b748f, #4d566f); border-color: #97a1bb; box-shadow: 0 0 6px rgba(150,162,195,.4); }
+
+/* sonuç: tüm atların bitiş çarpanları */
+.light-summary { width: 100%; max-width: 410px; margin: 8px auto 2px; }
+.ls-title { font-family: var(--display); font-weight: 700; font-size: 10px; letter-spacing: 2px; color: #9fb0ff; display: block; text-align: center; margin-bottom: 6px; }
+.ls-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+.ls-chip { display: inline-flex; align-items: center; gap: 4px; font-family: var(--display); font-weight: 800; font-size: 11px; padding: 2px 8px 2px 2px; border-radius: 999px; background: rgba(255,255,255,.05); }
+.ls-chip i { width: 17px; height: 17px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; font-style: normal; }
+.ls-chip.hi { background: rgba(120,140,255,.20); color: #cdd6ff; }
+.ls-chip.lo { background: rgba(150,162,195,.13); color: #aab2c8; }
+.ls-chip.off { opacity: .38; color: var(--ivory-dim); }
