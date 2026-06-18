@@ -31,7 +31,7 @@ const ROSTER = [
   { name: 'KASIRGA', fg: 83, fs: 85 }, { name: 'BORA', fg: 80, fs: 82 },
   { name: 'TUFAN', fg: 89, fs: 78 }, { name: 'ZEYBEK', fg: 84, fs: 88 },
   { name: 'ÇAĞLA', fg: 78, fs: 86 }, { name: 'ESRA', fg: 82, fs: 80 },
-  { name: 'YÜCEL', fg: 90, fs: 89 }, { name: 'ONUR', fg: 81, fs: 84 },
+  { name: 'SERKAN', fg: 90, fs: 89 }, { name: 'ONUR', fg: 81, fs: 84 },
   { name: 'ERDİ', fg: 87, fs: 82 }, { name: 'EMRAH', fg: 85, fs: 87 },
   { name: 'FUAT', fg: 83, fs: 85 }, { name: 'MEVLÜT', fg: 88, fs: 80 },
   { name: 'UFUK', fg: 79, fs: 89 }, { name: 'METİN', fg: 86, fs: 84 },
