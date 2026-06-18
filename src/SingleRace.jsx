@@ -81,8 +81,7 @@ export default function SingleRace() {
     let last = null
     while (fc < lightning.strikes.length && lightning.strikes[fc].atProgress <= prog) {
       const st = lightning.strikes[fc]
-      const payMult = Math.min(LIGHTNING_CAP, st.gamma * field.oddsWin[st.horse])
-      nm[st.horse] = fmtMult(payMult)
+      nm[st.horse] = fmtMult(st.gamma)
       const hp = Math.min(next[st.horse] / trackLen, 1)
       const tx = 8 + hp * 80, ty = ((st.horse + 0.5) / lineup.length) * 100
       last = { horse: st.horse, id: fc, mult: nm[st.horse], tx: +tx.toFixed(1), ty: +ty.toFixed(1), bolt: jagged(tx, ty) }
@@ -95,8 +94,8 @@ export default function SingleRace() {
     if (!next.some((p) => p >= trackLen)) return
     const ord = next.map((p, i) => ({ p, i, r: Math.random() })).sort((a, b) => b.p - a.p || b.r - a.r).map((o) => o.i)
     const finalG = lightning ? lightning.finalG : Array(N_HORSES).fill(0)
-    // bitişte tüm çarpanları kesinleştir (gösterim)
-    setLightM(finalG.map((g, i) => (g > 0 ? fmtMult(Math.min(LIGHTNING_CAP, g * field.oddsWin[i])) : 0)))
+    // bitişte tüm çarpanları kesinleştir (kat sayı gösterimi)
+    setLightM(finalG.map((g) => (g > 0 ? fmtMult(g) : 0)))
     setOrder(ord); setWinner(ord[0]); setHistory((h) => [ord[0], ...h].slice(0, 10))
 
     const results = bets.map((b) => {
@@ -105,11 +104,11 @@ export default function SingleRace() {
       const hit = b.type === 'kazanan' ? ord[0] === b.horse : ord.slice(0, PLACE_N).includes(b.horse)
       let win = 0, payMult = 0, boosted = false
       if (hit) {
-        if (struckBet) { payMult = Math.min(LIGHTNING_CAP, g * b.fairOdds); boosted = true }
+        if (struckBet) { payMult = Math.min(LIGHTNING_CAP, b.baseOdds * g); boosted = true }
         else payMult = b.baseOdds
         win = b.amount * payMult
       }
-      return { ...b, hit, win, payMult, boosted }
+      return { ...b, hit, win, payMult, boosted, factor: g }
     })
     setBetResults(results)
     const totalWin = results.reduce((s, r) => s + r.win, 0)
@@ -184,7 +183,7 @@ export default function SingleRace() {
       <section className="track-panel">
         <div className="track-head">
           <div className="track-title">
-            {phase === 'racing' && (<><span className="live-dot" /> {tick}. TUR · {mode.label.toUpperCase()}{topMult > 0 ? ` · EN YÜKSEK ⚡${topMult}x` : ''}</>)}
+            {phase === 'racing' && (<><span className="live-dot" /> {tick}. TUR · {mode.label.toUpperCase()}{topMult > 0 ? ` · EN YÜKSEK ⚡×${topMult}` : ''}</>)}
             {phase === 'betting' && <>BAHİSLER AÇIK · {trackLen} ADIMLIK PİST</>}
             {phase === 'result' && <>YARIŞ TAMAMLANDI</>}
           </div>
@@ -235,11 +234,28 @@ export default function SingleRace() {
                     <div key={i} className={`sr-row ${r.hit ? 'ok' : 'no'} ${r.boosted ? 'boost' : ''}`}>
                       <span className="sr-silk" style={{ background: lineup[r.horse].silk }}>{r.horse + 1}</span>
                       <span className="sr-name">{lineup[r.horse].name}</span>
-                      <span className="sr-type">{BET_TYPES[r.type].label}{r.boosted ? <em className="boost-tag">⚡{fmtMult(r.payMult)}x</em> : ''}</span>
+                      <span className="sr-type">{BET_TYPES[r.type].label}{r.boosted ? <em className="boost-tag">⚡×{fmtMult(r.factor)}</em> : ''}</span>
                       <span className="sr-amt">{fmt(r.amount)}</span>
                       <span className="sr-win">{r.hit ? `+${fmt(r.win)}` : '—'}</span>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {lightning && lightning.finalG.some((g) => g > 0) && (
+                <div className="light-summary">
+                  <span className="ls-title">⚡ BİTİŞ ÇARPANLARI</span>
+                  <div className="ls-row">
+                    {lineup.map((h, i) => {
+                      const g = lightning.finalG[i]
+                      return (
+                        <span key={i} className={`ls-chip ${g > 0 ? (g < 1 ? 'lo' : 'hi') : 'off'}`}>
+                          <i style={{ background: h.silk }}>{i + 1}</i>
+                          {g > 0 ? `×${fmtMult(g)}` : '—'}
+                        </span>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -292,13 +308,13 @@ export default function SingleRace() {
                   {betting ? (
                     <span className="row-odds">{baseWin[i].toFixed(2)}<small>x</small></span>
                   ) : (
-                    <span className="hsteps">{lightM[i] > 0 ? <b className="lit-mini">⚡{lightM[i]}x</b> : `${Math.min(positions[i], trackLen)}/${trackLen}`}</span>
+                    <span className="hsteps">{lightM[i] > 0 ? <b className="lit-mini">⚡×{lightM[i]}</b> : `${Math.min(positions[i], trackLen)}/${trackLen}`}</span>
                   )}
                 </button>
               )
             })}
           </div>
-          <p className="form-note">Gösterilen oran şimşeksiz kazançtır. Ata şimşek çarparsa o bahis tutarsa çarpan kadar öder (bitiş sırasına göre Kazanan/Plase).</p>
+          <p className="form-note">Gösterilen oran şimşeksiz kazançtır. Yarışta birkaç ata şimşek çarpıp çarpan (×) verir — bahsin tutarsa oranını bu kat sayıyla çarpar (bazen 3x, bazen 0.8x).</p>
         </div>
 
         <div className="card card-bet">
@@ -366,7 +382,7 @@ export default function SingleRace() {
               )}
               <div className="race-info">
                 <div><span className="bs-label">BAHİSLERİN</span><span className="bs-value sm">{bets.length} bahis · {fmt(totalStake)}</span></div>
-                <div><span className="bs-label">EN YÜKSEK ÇARPAN</span><span className="bs-value sm">{topMult > 0 ? `⚡${topMult}x` : '—'}</span></div>
+                <div><span className="bs-label">EN YÜKSEK ÇARPAN</span><span className="bs-value sm">{topMult > 0 ? `⚡×${topMult}` : '—'}</span></div>
               </div>
             </div>
           )}
@@ -374,7 +390,7 @@ export default function SingleRace() {
       </div>
 
       <p className="fineprint">
-        7 at · Kazanan (1.) ve Plase (ilk 2) · Gösterilen oran şimşeksiz; ata şimşek çarparsa bahsin tutarsa çarpan kadar öder ·
+        7 at · Kazanan (1.) ve Plase (ilk 2) · Yarışta birkaç ata şimşek çarpıp çarpan (×) verir; bahsin tutarsa oranını o kat sayıyla çarpar (bazen artırır, bazen 1'in altında) ·
         Teorik RTP %92.9 · Çarpan tavanı 1000x · Demo kredisi gerçek para değildir.
       </p>
     </div>
