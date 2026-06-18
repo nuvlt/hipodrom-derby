@@ -785,7 +785,7 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 /* ==================================================================
    ŞİMŞEK GÖRSEL CİLA (Faz 2.1) — gökyüzü + bulut + bolt + parlama
    ================================================================== */
-.sky { position: relative; height: 50px; margin-bottom: 8px; border-radius: 11px; overflow: hidden; display: flex; align-items: flex-end; background: linear-gradient(180deg, #060a1c 0%, #0f1730 65%, #1a2344 100%); border: 1px solid #2a3560; }
+.sky { position: relative; height: 56px; margin-bottom: 8px; border-radius: 11px; overflow: hidden; display: flex; align-items: flex-end; background: linear-gradient(180deg, #060a1c 0%, #0f1730 65%, #1a2344 100%); border: 1px solid #2a3560; }
 .sky::after { content: ''; position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% -20%, rgba(120,140,255,.10), transparent 60%); }
 .sky .cloud { position: absolute; top: 1px; left: 50%; transform: translateX(-50%); width: 190px; height: 44px; opacity: .92; filter: drop-shadow(0 3px 4px rgba(0,0,0,.4)); }
 .sky .cloud ellipse { fill: #313c5e; }
@@ -817,12 +817,12 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
    FAZ 2.2 — profesyonel bulut + değişken çarpan + bitiş çarpan tablosu
    ================================================================== */
 /* katmanlı (gooey) bulut */
-.sky .cloud { position: absolute; width: 196px; height: 76px; top: -18px; overflow: visible; }
-.cloud-main { left: 50%; transform: translateX(-50%); filter: drop-shadow(0 6px 7px rgba(0,0,0,.5)); z-index: 1; }
+.sky .cloud { position: absolute; width: 140px; height: 64px; top: -7px; overflow: visible; }
+.cloud-main { left: 50%; transform: translateX(-50%); filter: drop-shadow(0 4px 5px rgba(0,0,0,.45)); z-index: 1; }
 .cloud-far { left: 30%; transform: translateX(-50%) scale(.72); opacity: .5; top: -10px; z-index: 0; }
 .sky-flash { animation: skyflash .5s ease; }
 .sky-flash .cloud { animation: cloudlit .5s ease; }
-@keyframes cloudlit { 0% { filter: brightness(1); } 14% { filter: brightness(2.7) drop-shadow(0 0 11px #bcc8ff); } 100% { filter: brightness(1); } }
+@keyframes cloudlit { 0% { filter: drop-shadow(0 4px 5px rgba(0,0,0,.45)) brightness(1); } 16% { filter: drop-shadow(0 0 16px #aab9ff) brightness(1.55); } 100% { filter: drop-shadow(0 4px 5px rgba(0,0,0,.45)) brightness(1); } }
 
 /* 1'in altı çarpan = sönük/gri rozet (kazandırmayabilir) */
 .lit-badge.low { background: linear-gradient(180deg, #6b748f, #4d566f); border-color: #97a1bb; box-shadow: 0 0 6px rgba(150,162,195,.4); }
