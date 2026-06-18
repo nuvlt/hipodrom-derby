@@ -258,41 +258,40 @@ export function RaceTrack({ theme, lineup, positions, trackLen, modeKey, lastRol
   return (
     <div className={`track theme-${theme}`}>
       <div className={`sky ${struck ? 'sky-flash' : ''}`} key={struck ? `sky${struck.id}` : 'sky'}>
-        <svg className="cloud cloud-far" viewBox="0 0 200 64" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-          <g className="cl-shadow"><ellipse cx="56" cy="44" rx="34" ry="15" /><ellipse cx="92" cy="40" rx="30" ry="17" /><ellipse cx="124" cy="45" rx="28" ry="14" /></g>
-          <g className="cl-body"><ellipse cx="54" cy="40" rx="32" ry="15" /><ellipse cx="92" cy="35" rx="30" ry="18" /><ellipse cx="124" cy="41" rx="28" ry="15" /><ellipse cx="88" cy="46" rx="48" ry="12" /></g>
-          <g className="cl-light"><ellipse cx="78" cy="29" rx="18" ry="8" /><ellipse cx="108" cy="31" rx="15" ry="7" /></g>
-        </svg>
-        <svg className="cloud cloud-main" viewBox="0 0 200 80" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <svg className="cloud-defs" width="0" height="0" aria-hidden="true">
           <defs>
-            <linearGradient id="cmBody" x1="0" y1="12" x2="0" y2="70" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor="#828fc6" />
-              <stop offset="0.5" stopColor="#48547f" />
-              <stop offset="1" stopColor="#212a4c" />
+            <linearGradient id="cmBody" x1="0" y1="16" x2="0" y2="84" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor="#909ed3" />
+              <stop offset="0.5" stopColor="#4b577f" />
+              <stop offset="1" stopColor="#212a4b" />
             </linearGradient>
-            <radialGradient id="cmGlow" cx="86" cy="28" r="54" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor="#c2cdf4" stopOpacity="0.92" />
-              <stop offset="0.55" stopColor="#8e9bd6" stopOpacity="0.22" />
-              <stop offset="1" stopColor="#8e9bd6" stopOpacity="0" />
+            <radialGradient id="cmHi" cx="84" cy="34" r="50" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor="#d4ddf8" stopOpacity="0.95" />
+              <stop offset="0.55" stopColor="#aab6e6" stopOpacity="0.18" />
+              <stop offset="1" stopColor="#aab6e6" stopOpacity="0" />
             </radialGradient>
-            <radialGradient id="cmBase" cx="100" cy="60" r="62" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor="#161d36" stopOpacity="0.55" />
-              <stop offset="1" stopColor="#161d36" stopOpacity="0" />
-            </radialGradient>
+            <filter id="cmGoo" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="3.4" result="b" />
+              <feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10" result="g" />
+              <feComposite in="SourceGraphic" in2="g" operator="atop" />
+            </filter>
           </defs>
-          <ellipse cx="100" cy="60" rx="66" ry="15" fill="url(#cmBase)" />
-          <g>
-            <ellipse cx="56" cy="49" rx="40" ry="18" fill="url(#cmBody)" />
-            <ellipse cx="100" cy="41" rx="42" ry="23" fill="url(#cmBody)" />
-            <ellipse cx="144" cy="49" rx="36" ry="18" fill="url(#cmBody)" />
-            <ellipse cx="100" cy="55" rx="66" ry="15" fill="url(#cmBody)" />
-            <ellipse cx="79" cy="33" rx="27" ry="16" fill="url(#cmBody)" />
-            <ellipse cx="122" cy="35" rx="25" ry="15" fill="url(#cmBody)" />
+        </svg>
+        <svg className="cloud cloud-far" viewBox="0 0 200 90" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <g filter="url(#cmGoo)" fill="#2c3658">
+            <ellipse cx="100" cy="64" rx="52" ry="14" />
+            <circle cx="68" cy="56" r="18" /><circle cx="104" cy="50" r="22" /><circle cx="136" cy="56" r="17" />
+            <circle cx="92" cy="46" r="15" />
           </g>
-          <g className="cm-hi">
-            <ellipse cx="84" cy="29" rx="42" ry="17" fill="url(#cmGlow)" />
-            <ellipse cx="116" cy="33" rx="26" ry="11" fill="url(#cmGlow)" />
-            <ellipse cx="62" cy="38" rx="16" ry="7" fill="url(#cmGlow)" />
+        </svg>
+        <svg className="cloud cloud-main" viewBox="0 0 200 90" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <g filter="url(#cmGoo)" fill="url(#cmBody)">
+            <ellipse cx="100" cy="68" rx="60" ry="15" />
+            <circle cx="58" cy="56" r="24" /><circle cx="100" cy="47" r="31" /><circle cx="144" cy="56" r="24" />
+            <circle cx="80" cy="41" r="20" /><circle cx="122" cy="43" r="20" />
+          </g>
+          <g filter="url(#cmGoo)" fill="url(#cmHi)">
+            <circle cx="80" cy="37" r="17" /><circle cx="110" cy="39" r="13" /><circle cx="60" cy="46" r="10" />
           </g>
         </svg>
         <span className="sky-label">⚡ ŞİMŞEK ALANI</span>
