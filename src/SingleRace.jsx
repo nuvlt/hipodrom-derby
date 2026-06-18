@@ -64,7 +64,9 @@ export default function SingleRace() {
   const totalStake = bets.reduce((s, b) => s + b.amount, 0)
   const mineIdxs = betting ? (pickHorse !== null ? [pickHorse] : []) : bets.map((b) => b.horse)
   const pickOdds = pickHorse === null ? null : baseOf(pickHorse, pickType)
-  const canStart = bets.length > 0 && totalStake <= balance
+  const pending = pickHorse !== null && pickAmount > 0 // fişe eklenmemiş, hazır seçim
+  const effectiveTotal = totalStake + (pending ? pickAmount : 0)
+  const canStart = (bets.length > 0 || pending) && effectiveTotal <= balance
 
   useEffect(() => {
     if (phase !== 'racing' || playMode !== 'auto' || winner !== null) return
@@ -128,17 +130,26 @@ export default function SingleRace() {
 
   function manualStep() { if (phase !== 'racing' || winner !== null || rolling) return; step() }
 
+  function makeBet(i, type, amount) {
+    return { horse: i, type, amount, baseOdds: baseOf(i, type), fairOdds: fairOf(i, type) }
+  }
   function addBet() {
     if (pickHorse === null || pickAmount <= 0) return
-    setBets((bs) => [...bs, { horse: pickHorse, type: pickType, amount: pickAmount, baseOdds: baseOf(pickHorse, pickType), fairOdds: fairOf(pickHorse, pickType) }])
+    setBets((bs) => [...bs, makeBet(pickHorse, pickType, pickAmount)])
+    setPickAmount(0) // eklendi; bekleyen seçim kalmasın
     sfx.bet()
   }
   function removeBet(i) { setBets((bs) => bs.filter((_, k) => k !== i)) }
 
   function startRace() {
     if (!canStart) return
+    const finalBets = pending ? [...bets, makeBet(pickHorse, pickType, pickAmount)] : [...bets]
+    if (finalBets.length === 0) return
+    const total = finalBets.reduce((s, b) => s + b.amount, 0)
+    if (total > balance) return
     sfx.start()
-    setBalance((b) => b - totalStake)
+    setBets(finalBets)
+    setBalance((b) => b - total)
     setLightning(genLightning(N_HORSES)); setLightM(Array(N_HORSES).fill(0)); setFiredCount(0); setStruck(null)
     setPositions(Array(N_HORSES).fill(0)); setLastRolls(Array(N_HORSES).fill(null))
     setWinner(null); setOrder([]); setTick(0); setRolling(false)
@@ -336,12 +347,12 @@ export default function SingleRace() {
                 <input className="stake-input" type="number" min="0" value={pickAmount || ''} onChange={(e) => setCustom(e.target.value)} placeholder="0" />
               </div>
               <button className="btn btn-add" disabled={pickHorse === null || pickAmount <= 0} onClick={addBet}>
-                {pickHorse === null ? 'ÖNCE AT SEÇ' : pickAmount <= 0 ? 'MİKTAR GİR' : `FİŞE EKLE · ${lineup[pickHorse].name} ${BET_TYPES[pickType].label} ${fmt(pickAmount)}`}
+                {pickHorse === null ? 'ÖNCE AT SEÇ' : pickAmount <= 0 ? 'MİKTAR GİR' : `+ FİŞE EKLE (başka at için)`}
               </button>
 
               <div className="set-label slip-label">BAHİS FİŞİ {bets.length > 0 && `(${bets.length})`}</div>
               {bets.length === 0 ? (
-                <p className="slip-empty">Henüz bahis yok. At seç, tür ve miktar belirle, “Fişe Ekle”.</p>
+                <p className="slip-empty">Tek bahis için at + tür + miktar seçip aşağıdan <b>Oyna</b>’ya bas. Birden fazla ata oynamak istersen <b>Fişe Ekle</b> ile üst üste ekle.</p>
               ) : (
                 <div className="slip">
                   {bets.map((b, i) => (
@@ -357,11 +368,17 @@ export default function SingleRace() {
                 </div>
               )}
               <div className="bet-summary">
-                <div><span className="bs-label">TOPLAM BAHİS</span><span className="bs-value">{fmt(totalStake)}</span></div>
-                <div><span className="bs-label">KALAN BAKİYE</span><span className="bs-value">{fmt(balance - totalStake)}</span></div>
+                <div><span className="bs-label">TOPLAM BAHİS</span><span className="bs-value">{fmt(effectiveTotal)}</span></div>
+                <div><span className="bs-label">KALAN BAKİYE</span><span className="bs-value">{fmt(balance - effectiveTotal)}</span></div>
               </div>
               <button className="btn btn-gold wide" disabled={!canStart} onClick={startRace}>
-                {bets.length === 0 ? 'FİŞE BAHİS EKLE' : totalStake > balance ? 'BAKİYE YETMİYOR' : `YARIŞI BAŞLAT · ${fmt(totalStake)}`}
+                {!pending && bets.length === 0
+                  ? 'AT VE MİKTAR SEÇ'
+                  : effectiveTotal > balance
+                  ? 'BAKİYE YETMİYOR'
+                  : bets.length === 0 && pending
+                  ? `OYNA · ${lineup[pickHorse].name} ${BET_TYPES[pickType].label} ${fmt(pickAmount)}`
+                  : `YARIŞI BAŞLAT · ${fmt(effectiveTotal)}`}
               </button>
             </>
           )}
