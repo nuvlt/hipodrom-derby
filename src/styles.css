@@ -816,13 +816,10 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 /* ==================================================================
    FAZ 2.2 — profesyonel bulut + değişken çarpan + bitiş çarpan tablosu
    ================================================================== */
-/* katmanlı (cel-shade) bulut */
-.sky .cloud { position: absolute; width: 176px; height: 60px; top: -7px; }
-.cloud-main { left: 50%; transform: translateX(-50%); filter: drop-shadow(0 5px 6px rgba(0,0,0,.5)); z-index: 1; }
-.cloud-far { left: 33%; transform: translateX(-50%) scale(.66); opacity: .4; top: -2px; z-index: 0; }
-.sky .cloud .cl-shadow ellipse { fill: #161d34; }
-.sky .cloud .cl-body ellipse { fill: #36426a; }
-.sky .cloud .cl-light ellipse { fill: #5d6aaa; opacity: .92; }
+/* katmanlı (gooey) bulut */
+.sky .cloud { position: absolute; width: 196px; height: 76px; top: -18px; overflow: visible; }
+.cloud-main { left: 50%; transform: translateX(-50%); filter: drop-shadow(0 6px 7px rgba(0,0,0,.5)); z-index: 1; }
+.cloud-far { left: 30%; transform: translateX(-50%) scale(.72); opacity: .5; top: -10px; z-index: 0; }
 .sky-flash { animation: skyflash .5s ease; }
 .sky-flash .cloud { animation: cloudlit .5s ease; }
 @keyframes cloudlit { 0% { filter: brightness(1); } 14% { filter: brightness(2.7) drop-shadow(0 0 11px #bcc8ff); } 100% { filter: brightness(1); } }
