@@ -124,11 +124,11 @@ export function oddsFromProb(p, target = TARGET_RTP, cap = 99) {
    üniform %92.9'a kalibre. Ödeme tavanı 1000x.
    ================================================================== */
 export const LIGHTNING_CAP = 1000
-export const LIGHTNING_BETA = 0.845
+export const LIGHTNING_BETA = 0.817
 const LG = {
-  Kv: [2, 3, 4, 5], Kw: [0.22, 0.40, 0.27, 0.11], restrikeP: 0.12, gcap: 20,
-  Bv: [0.8, 1.0, 1.2, 1.5, 2.0, 3.0, 5], Bw: [0.18, 0.26, 0.26, 0.16, 0.08, 0.04, 0.02],
-  Gv: [1.4, 1.8, 2.5], Gw: [0.5, 0.33, 0.17],
+  Kv: [3, 4, 5], Kw: [0.48, 0.37, 0.15], restrikeP: 0.11, gcap: 20,
+  Bv: [0.7, 0.9, 1.1, 1.4, 1.8, 2.4, 3.5], Bw: [0.16, 0.21, 0.21, 0.16, 0.11, 0.09, 0.06],
+  Gv: [1.4, 1.7, 2.3], Gw: [0.48, 0.34, 0.18],
 }
 function wsel(items, weights) {
   let r = Math.random() * weights.reduce((a, b) => a + b, 0)
@@ -263,10 +263,37 @@ export function RaceTrack({ theme, lineup, positions, trackLen, modeKey, lastRol
           <g className="cl-body"><ellipse cx="54" cy="40" rx="32" ry="15" /><ellipse cx="92" cy="35" rx="30" ry="18" /><ellipse cx="124" cy="41" rx="28" ry="15" /><ellipse cx="88" cy="46" rx="48" ry="12" /></g>
           <g className="cl-light"><ellipse cx="78" cy="29" rx="18" ry="8" /><ellipse cx="108" cy="31" rx="15" ry="7" /></g>
         </svg>
-        <svg className="cloud cloud-main" viewBox="0 0 200 64" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-          <g className="cl-shadow"><ellipse cx="58" cy="46" rx="40" ry="17" /><ellipse cx="100" cy="42" rx="36" ry="20" /><ellipse cx="138" cy="47" rx="34" ry="16" /></g>
-          <g className="cl-body"><ellipse cx="56" cy="42" rx="38" ry="17" /><ellipse cx="100" cy="36" rx="36" ry="21" /><ellipse cx="138" cy="43" rx="33" ry="17" /><ellipse cx="98" cy="49" rx="58" ry="13" /></g>
-          <g className="cl-light"><ellipse cx="82" cy="29" rx="22" ry="9" /><ellipse cx="118" cy="31" rx="18" ry="8" /><ellipse cx="60" cy="35" rx="12" ry="5" /></g>
+        <svg className="cloud cloud-main" viewBox="0 0 200 80" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <defs>
+            <linearGradient id="cmBody" x1="0" y1="12" x2="0" y2="70" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor="#828fc6" />
+              <stop offset="0.5" stopColor="#48547f" />
+              <stop offset="1" stopColor="#212a4c" />
+            </linearGradient>
+            <radialGradient id="cmGlow" cx="86" cy="28" r="54" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor="#c2cdf4" stopOpacity="0.92" />
+              <stop offset="0.55" stopColor="#8e9bd6" stopOpacity="0.22" />
+              <stop offset="1" stopColor="#8e9bd6" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="cmBase" cx="100" cy="60" r="62" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor="#161d36" stopOpacity="0.55" />
+              <stop offset="1" stopColor="#161d36" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <ellipse cx="100" cy="60" rx="66" ry="15" fill="url(#cmBase)" />
+          <g>
+            <ellipse cx="56" cy="49" rx="40" ry="18" fill="url(#cmBody)" />
+            <ellipse cx="100" cy="41" rx="42" ry="23" fill="url(#cmBody)" />
+            <ellipse cx="144" cy="49" rx="36" ry="18" fill="url(#cmBody)" />
+            <ellipse cx="100" cy="55" rx="66" ry="15" fill="url(#cmBody)" />
+            <ellipse cx="79" cy="33" rx="27" ry="16" fill="url(#cmBody)" />
+            <ellipse cx="122" cy="35" rx="25" ry="15" fill="url(#cmBody)" />
+          </g>
+          <g className="cm-hi">
+            <ellipse cx="84" cy="29" rx="42" ry="17" fill="url(#cmGlow)" />
+            <ellipse cx="116" cy="33" rx="26" ry="11" fill="url(#cmGlow)" />
+            <ellipse cx="62" cy="38" rx="16" ry="7" fill="url(#cmGlow)" />
+          </g>
         </svg>
         <span className="sky-label">⚡ ŞİMŞEK ALANI</span>
       </div>
