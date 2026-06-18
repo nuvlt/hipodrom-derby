@@ -4,12 +4,11 @@
    ================================================================== */
 
 export const TICK_MS = 880
-export const PLACE_N = 3 // 10 atta plase = ilk 3
+export const PLACE_N = 2 // 7 atta plase = ilk 2
 
 export const BET_TYPES = {
   kazanan: { key: 'kazanan', label: 'Kazanan', hint: '1. gelsin', payout: 6.5 },
-  plase: { key: 'plase', label: 'Plase', hint: 'İlk 3', payout: 3.25 },
-  simsek: { key: 'simsek', label: 'Şimşek', hint: 'Çarpan yakala', payout: 0 },
+  plase: { key: 'plase', label: 'Plase', hint: 'İlk 2', payout: 3.25 },
 }
 
 export const MODES = {
@@ -21,7 +20,7 @@ export const MODES = {
 export const HOLE_COLORS = { 1: '#3D7BE8', 2: '#29B8C9', 3: '#2EC27E', 4: '#F2742C', 5: '#E2484A' }
 export const STEP_COLORS = { 1: '#3D7BE8', 2: '#E8B64C', 3: '#E2484A' }
 export const STEP_NAMES = { 1: 'MAVİ', 2: 'SARI', 3: 'KIRMIZI' }
-export const SILKS = ['#E2484A', '#3D7BE8', '#E8B64C', '#9B5DE5', '#2EC27E', '#F2742C', '#29B8C9', '#E255A0', '#5C6BC0', '#9CCC4E']
+export const SILKS = ['#E2484A', '#3D7BE8', '#E8B64C', '#9B5DE5', '#2EC27E', '#F2742C', '#29B8C9']
 export const CHIPS = [10, 25, 50, 100, 250]
 
 const ROSTER = [
@@ -42,14 +41,14 @@ const ROSTER = [
 export const fmt = (n) => n.toLocaleString('tr-TR', { maximumFractionDigits: 2, minimumFractionDigits: 0 })
 export const rollFace = (faces) => faces[Math.floor(Math.random() * faces.length)]
 
-/* 24 attan 10'unu rastgele seç, kulvar rengini ata */
+/* 24 attan 7'sini rastgele seç, kulvar rengini ata */
 export function pickLineup() {
   const arr = [...ROSTER]
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[arr[i], arr[j]] = [arr[j], arr[i]]
   }
-  return arr.slice(0, 10).map((h, i) => ({ ...h, silk: SILKS[i] }))
+  return arr.slice(0, 7).map((h, i) => ({ ...h, silk: SILKS[i] }))
 }
 
 /* bitiş anındaki konumlara göre sıralama; eşitlik rastgele çözülür (simetri korunur) */
@@ -117,33 +116,34 @@ export function oddsFromProb(p, target = TARGET_RTP, cap = 99) {
 }
 
 /* ==================================================================
-   ŞİMŞEK ÇARPANI (konumdan bağımsız bahis) — RTP %92.9'a kalibreli
-   Yarış boyunca ~2-6 çarpma rastgele atlara düşer; ilk çarpma "base",
-   sonrakiler çarpımsal büyütür; tavan 1000x. Monte Carlo ile her atın
-   ortalama ödemesi = 0.929 olacak şekilde ayarlandı.
+   ŞİMŞEK ÇARPANI — Kazanan/Plase içine gömülü (Lightning Roulette mantığı)
+   Baz oran = LIGHTNING_BETA * fair oran (gösterilen). Ata şimşek çarparsa
+   o atın bahsi tutarsa ödeme = γ * fair oran (γ ≥ ~1.2, üst üste çarparsa
+   büyür). Monte Carlo ile RTP üniform %92.9'a kalibre. Ödeme tavanı 1000x.
    ================================================================== */
 export const LIGHTNING_CAP = 1000
-const LB = {
-  Kv: [2, 3, 4, 5, 6], Kw: [0.255, 0.34, 0.23, 0.115, 0.06],
-  Bv: [2, 3, 4, 5], Bw: [0.525, 0.29, 0.125, 0.06],
-  Fv: [1.5, 2, 2.5, 3, 4], Fw: [0.43, 0.315, 0.145, 0.08, 0.03],
+export const LIGHTNING_BETA = 0.85
+const LG = {
+  Kv: [1, 2, 3], Kw: [0.48, 0.38, 0.14],
+  Bv: [1.2, 1.4, 1.7, 2.2, 3], Bw: [0.46, 0.28, 0.15, 0.08, 0.03],
+  Fv: [1.3, 1.6, 2, 2.5], Fw: [0.46, 0.30, 0.16, 0.08],
 }
 function wsel(items, weights) {
   let r = Math.random() * weights.reduce((a, b) => a + b, 0)
   for (let i = 0; i < items.length; i++) { r -= weights[i]; if (r <= 0) return items[i] }
   return items[items.length - 1]
 }
-export function genLightning(n = 10) {
-  const K = wsel(LB.Kv, LB.Kw)
-  const times = Array.from({ length: K }, () => 0.06 + Math.random() * 0.82).sort((a, b) => a - b)
-  const M = Array(n).fill(0)
+export function genLightning(n = 7) {
+  const K = wsel(LG.Kv, LG.Kw)
+  const times = Array.from({ length: K }, () => 0.08 + Math.random() * 0.78).sort((a, b) => a - b)
+  const G = Array(n).fill(0)
   const strikes = times.map((t) => {
     const horse = Math.floor(Math.random() * n)
-    if (M[horse] === 0) M[horse] = wsel(LB.Bv, LB.Bw)
-    else M[horse] = Math.min(LIGHTNING_CAP, +(M[horse] * wsel(LB.Fv, LB.Fw)).toFixed(2))
-    return { horse, atProgress: t, M: M[horse] }
+    if (G[horse] === 0) G[horse] = wsel(LG.Bv, LG.Bw)
+    else G[horse] = Math.min(60, +(G[horse] * wsel(LG.Fv, LG.Fw)).toFixed(2))
+    return { horse, atProgress: t, gamma: G[horse] }
   })
-  return { strikes, finalM: M.slice() }
+  return { strikes, finalG: G.slice() }
 }
 
 /* alanı kur: ratingler + mod → drive, ağırlık, olasılık, oran */
@@ -246,30 +246,47 @@ export function BallBoard({ holes, value, tick, auto, disabled, done, onThrow })
 export function RaceTrack({ theme, lineup, positions, trackLen, modeKey, lastRolls, tick, mineIdxs = [], winnerIdx, placeIdxs = [], lightM = [], struck, running }) {
   return (
     <div className={`track theme-${theme}`}>
-      <div className={`sky ${struck ? 'sky-flash' : ''}`} key={struck ? `s${struck.id}` : 'none'}>
+      <div className={`sky ${struck ? 'sky-flash' : ''}`} key={struck ? `sky${struck.id}` : 'sky'}>
+        <svg className="cloud" viewBox="0 0 120 40" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <ellipse cx="40" cy="26" rx="26" ry="13" /><ellipse cx="62" cy="20" rx="22" ry="15" />
+          <ellipse cx="82" cy="27" rx="22" ry="12" /><ellipse cx="58" cy="30" rx="34" ry="10" />
+        </svg>
         <span className="sky-label">⚡ ŞİMŞEK ALANI</span>
-        {struck && <span className="sky-bolt" style={{ left: `${8 + struck.horse * 8.2}%` }}>⚡</span>}
       </div>
-      {lineup.map((h, i) => {
-        const pct = Math.min(positions[i] / trackLen, 1)
-        const m = lightM[i] || 0
-        return (
-          <div key={i} className={`lane ${mineIdxs.includes(i) ? 'lane-mine' : ''} ${winnerIdx === i ? 'lane-winner' : ''} ${placeIdxs.includes(i) ? 'lane-place' : ''}`}>
-            <div className="lane-no" style={{ background: h.silk }}>{i + 1}</div>
-            <div className="lane-run">
-              <div className="lane-marks"><i /><i /><i /></div>
-              <div className="runner" style={{ '--p': pct }}>
-                {m > 0 && <span className={`lit-badge ${struck && struck.horse === i ? 'flash' : ''}`}>⚡{m}x</span>}
-                <Horse silk={h.silk} number={i + 1} running={running} won={winnerIdx === i} />
-                {running && lastRolls[i] && (
-                  <span className="roll-pop" key={tick} style={{ background: modeKey === 'renk' ? STEP_COLORS[lastRolls[i]] : 'var(--ivory)', color: modeKey === 'renk' ? '#fff' : '#1b1b1b' }}>+{lastRolls[i]}</span>
-                )}
+
+      <div className="lanes-wrap">
+        <svg className="bolt-fx" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          {struck && (
+            <g key={`b${struck.id}`} className="bolt-group">
+              <polyline className="bolt-line glow" points={struck.bolt} />
+              <polyline className="bolt-line core" points={struck.bolt} />
+              <circle className="bolt-hit" cx={struck.tx} cy={struck.ty} r="5" />
+            </g>
+          )}
+        </svg>
+
+        {lineup.map((h, i) => {
+          const pct = Math.min(positions[i] / trackLen, 1)
+          const m = lightM[i] || 0
+          const zap = struck && struck.horse === i
+          return (
+            <div key={i} className={`lane ${mineIdxs.includes(i) ? 'lane-mine' : ''} ${winnerIdx === i ? 'lane-winner' : ''} ${placeIdxs.includes(i) ? 'lane-place' : ''}`}>
+              <div className="lane-no" style={{ background: h.silk }}>{i + 1}</div>
+              <div className="lane-run">
+                <div className="lane-marks"><i /><i /><i /></div>
+                <div className={`runner ${zap ? 'zapped' : ''}`} key={zap ? `z${struck.id}` : `r${i}`} style={{ '--p': pct }}>
+                  {m > 0 && <span className={`lit-badge ${zap ? 'flash' : ''}`}>⚡{m}x</span>}
+                  <Horse silk={h.silk} number={i + 1} running={running} won={winnerIdx === i} />
+                  {running && lastRolls[i] && (
+                    <span className="roll-pop" key={tick} style={{ background: modeKey === 'renk' ? STEP_COLORS[lastRolls[i]] : 'var(--ivory)', color: modeKey === 'renk' ? '#fff' : '#1b1b1b' }}>+{lastRolls[i]}</span>
+                  )}
+                </div>
               </div>
+              <div className="finish-strip" />
             </div>
-            <div className="finish-strip" />
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
