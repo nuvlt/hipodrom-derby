@@ -2,10 +2,20 @@ import { useEffect, useMemo, useState } from 'react'
 import * as sfx from './sound'
 import {
   MODES, BET_TYPES, STEP_NAMES, SILKS, CHIPS, STEP_COLORS, TICK_MS, PLACE_N,
-  fmt, pickLineup, buildField, weightedPick, genLightning, Die, BallBoard, RaceTrack,
+  LIGHTNING_BETA, LIGHTNING_CAP, fmt, pickLineup, buildField, weightedPick, genLightning, Die, BallBoard, RaceTrack,
 } from './game'
 
 const START_BALANCE = 1000
+const N_HORSES = 7
+const fmtMult = (x) => (x >= 10 ? Math.round(x) : +x.toFixed(1))
+
+function jagged(tx, ty) {
+  const segs = 5
+  const pts = [`${tx.toFixed(1)},0`]
+  for (let k = 1; k < segs; k++) { const yy = (ty * k) / segs; const xx = tx + (Math.random() * 7 - 3.5); pts.push(`${xx.toFixed(1)},${yy.toFixed(1)}`) }
+  pts.push(`${tx.toFixed(1)},${ty.toFixed(1)}`)
+  return pts.join(' ')
+}
 
 export default function SingleRace() {
   const [balance, setBalance] = useState(START_BALANCE)
@@ -16,24 +26,21 @@ export default function SingleRace() {
   const [muted, setMutedState] = useState(false)
   const [lineup, setLineup] = useState(() => pickLineup())
 
-  // bahis fişi (çoklu)
   const [bets, setBets] = useState([])
   const [pickHorse, setPickHorse] = useState(null)
   const [pickType, setPickType] = useState('kazanan')
   const [pickAmount, setPickAmount] = useState(50)
 
-  // yarış
-  const [positions, setPositions] = useState(Array(10).fill(0))
-  const [lastRolls, setLastRolls] = useState(Array(10).fill(null))
+  const [positions, setPositions] = useState(Array(N_HORSES).fill(0))
+  const [lastRolls, setLastRolls] = useState(Array(N_HORSES).fill(null))
   const [winner, setWinner] = useState(null)
   const [order, setOrder] = useState([])
   const [history, setHistory] = useState([])
   const [tick, setTick] = useState(0)
   const [rolling, setRolling] = useState(false)
 
-  // şimşek
   const [lightning, setLightning] = useState(null)
-  const [lightM, setLightM] = useState(Array(10).fill(0))
+  const [lightM, setLightM] = useState(Array(N_HORSES).fill(0))
   const [firedCount, setFiredCount] = useState(0)
   const [struck, setStruck] = useState(null)
 
@@ -48,9 +55,15 @@ export default function SingleRace() {
     return buildField(ratings, MODES[modeKey])
   }, [lineup, modeKey, theme])
 
+  // gösterilen baz oran = fair * BETA (şimşek payını karşılar)
+  const baseWin = field.oddsWin.map((o) => o * LIGHTNING_BETA)
+  const basePlase = field.oddsPlase.map((o) => o * LIGHTNING_BETA)
+  const baseOf = (i, type) => (type === 'kazanan' ? baseWin[i] : basePlase[i])
+  const fairOf = (i, type) => (type === 'kazanan' ? field.oddsWin[i] : field.oddsPlase[i])
+
   const totalStake = bets.reduce((s, b) => s + b.amount, 0)
   const mineIdxs = betting ? (pickHorse !== null ? [pickHorse] : []) : bets.map((b) => b.horse)
-  const pickOdds = pickHorse === null ? null : pickType === 'kazanan' ? field.oddsWin[pickHorse] : pickType === 'plase' ? field.oddsPlase[pickHorse] : null
+  const pickOdds = pickHorse === null ? null : baseOf(pickHorse, pickType)
   const canStart = bets.length > 0 && totalStake <= balance
 
   useEffect(() => {
@@ -67,7 +80,13 @@ export default function SingleRace() {
     const nm = [...lightM]
     let last = null
     while (fc < lightning.strikes.length && lightning.strikes[fc].atProgress <= prog) {
-      const st = lightning.strikes[fc]; nm[st.horse] = st.M; last = { horse: st.horse, M: st.M, id: fc }; fc++
+      const st = lightning.strikes[fc]
+      const payMult = Math.min(LIGHTNING_CAP, st.gamma * field.oddsWin[st.horse])
+      nm[st.horse] = fmtMult(payMult)
+      const hp = Math.min(next[st.horse] / trackLen, 1)
+      const tx = 8 + hp * 80, ty = ((st.horse + 0.5) / lineup.length) * 100
+      last = { horse: st.horse, id: fc, mult: nm[st.horse], tx: +tx.toFixed(1), ty: +ty.toFixed(1), bolt: jagged(tx, ty) }
+      fc++
     }
     if (last) { setLightM(nm); setFiredCount(fc); setStruck(last); sfx.zap?.() }
   }
@@ -75,20 +94,27 @@ export default function SingleRace() {
   function settle(next) {
     if (!next.some((p) => p >= trackLen)) return
     const ord = next.map((p, i) => ({ p, i, r: Math.random() })).sort((a, b) => b.p - a.p || b.r - a.r).map((o) => o.i)
-    const fM = lightning ? lightning.finalM : Array(10).fill(0)
-    setLightM(fM)
+    const finalG = lightning ? lightning.finalG : Array(N_HORSES).fill(0)
+    // bitişte tüm çarpanları kesinleştir (gösterim)
+    setLightM(finalG.map((g, i) => (g > 0 ? fmtMult(Math.min(LIGHTNING_CAP, g * field.oddsWin[i])) : 0)))
     setOrder(ord); setWinner(ord[0]); setHistory((h) => [ord[0], ...h].slice(0, 10))
+
     const results = bets.map((b) => {
-      let hit = false, win = 0, mult = b.odds
-      if (b.type === 'kazanan') { hit = ord[0] === b.horse; win = hit ? b.amount * b.odds : 0 }
-      else if (b.type === 'plase') { hit = ord.slice(0, PLACE_N).includes(b.horse); win = hit ? b.amount * b.odds : 0 }
-      else { mult = fM[b.horse]; hit = mult > 0; win = mult > 0 ? b.amount * mult : 0 }
-      return { ...b, hit, win, mult }
+      const g = finalG[b.horse]
+      const struckBet = g > 0
+      const hit = b.type === 'kazanan' ? ord[0] === b.horse : ord.slice(0, PLACE_N).includes(b.horse)
+      let win = 0, payMult = 0, boosted = false
+      if (hit) {
+        if (struckBet) { payMult = Math.min(LIGHTNING_CAP, g * b.fairOdds); boosted = true }
+        else payMult = b.baseOdds
+        win = b.amount * payMult
+      }
+      return { ...b, hit, win, payMult, boosted }
     })
     setBetResults(results)
     const totalWin = results.reduce((s, r) => s + r.win, 0)
     if (totalWin > 0) { setBalance((bal) => bal + totalWin); sfx.win() } else sfx.lose()
-    setTimeout(() => setPhase('result'), 800)
+    setTimeout(() => setPhase('result'), 850)
   }
 
   function step() {
@@ -105,8 +131,7 @@ export default function SingleRace() {
 
   function addBet() {
     if (pickHorse === null || pickAmount <= 0) return
-    const odds = pickType === 'kazanan' ? field.oddsWin[pickHorse] : pickType === 'plase' ? field.oddsPlase[pickHorse] : 0
-    setBets((bs) => [...bs, { horse: pickHorse, type: pickType, amount: pickAmount, odds }])
+    setBets((bs) => [...bs, { horse: pickHorse, type: pickType, amount: pickAmount, baseOdds: baseOf(pickHorse, pickType), fairOdds: fairOf(pickHorse, pickType) }])
     sfx.bet()
   }
   function removeBet(i) { setBets((bs) => bs.filter((_, k) => k !== i)) }
@@ -115,8 +140,8 @@ export default function SingleRace() {
     if (!canStart) return
     sfx.start()
     setBalance((b) => b - totalStake)
-    setLightning(genLightning(10)); setLightM(Array(10).fill(0)); setFiredCount(0); setStruck(null)
-    setPositions(Array(10).fill(0)); setLastRolls(Array(10).fill(null))
+    setLightning(genLightning(N_HORSES)); setLightM(Array(N_HORSES).fill(0)); setFiredCount(0); setStruck(null)
+    setPositions(Array(N_HORSES).fill(0)); setLastRolls(Array(N_HORSES).fill(null))
     setWinner(null); setOrder([]); setTick(0); setRolling(false)
     setPhase('racing')
   }
@@ -124,9 +149,9 @@ export default function SingleRace() {
   function newRound() {
     setLineup(pickLineup())
     setBets([]); setPickHorse(null); setPickAmount(50)
-    setPositions(Array(10).fill(0)); setLastRolls(Array(10).fill(null))
+    setPositions(Array(N_HORSES).fill(0)); setLastRolls(Array(N_HORSES).fill(null))
     setWinner(null); setOrder([]); setBetResults([])
-    setLightning(null); setLightM(Array(10).fill(0)); setFiredCount(0); setStruck(null)
+    setLightning(null); setLightM(Array(N_HORSES).fill(0)); setFiredCount(0); setStruck(null)
     setPhase('betting')
     if (balance <= 0) setBalance(START_BALANCE)
   }
@@ -137,7 +162,7 @@ export default function SingleRace() {
 
   const max = Math.max(...positions)
   const leaderIdx = max === 0 ? null : positions.indexOf(max)
-  const placeIdxs = phase === 'result' ? [order[1], order[2]] : []
+  const placeIdxs = phase === 'result' ? [order[1]] : []
   const totalWin = betResults.reduce((s, r) => s + r.win, 0)
   const netResult = totalWin - totalStake
   const topMult = Math.max(0, ...lightM)
@@ -207,10 +232,10 @@ export default function SingleRace() {
               {betResults.length > 0 && (
                 <div className="slip-results">
                   {betResults.map((r, i) => (
-                    <div key={i} className={`sr-row ${r.hit ? 'ok' : 'no'}`}>
+                    <div key={i} className={`sr-row ${r.hit ? 'ok' : 'no'} ${r.boosted ? 'boost' : ''}`}>
                       <span className="sr-silk" style={{ background: lineup[r.horse].silk }}>{r.horse + 1}</span>
                       <span className="sr-name">{lineup[r.horse].name}</span>
-                      <span className="sr-type">{BET_TYPES[r.type].label}{r.type === 'simsek' && r.hit ? ` ⚡${r.mult}x` : ''}</span>
+                      <span className="sr-type">{BET_TYPES[r.type].label}{r.boosted ? <em className="boost-tag">⚡{fmtMult(r.payMult)}x</em> : ''}</span>
                       <span className="sr-amt">{fmt(r.amount)}</span>
                       <span className="sr-win">{r.hit ? `+${fmt(r.win)}` : '—'}</span>
                     </div>
@@ -220,7 +245,7 @@ export default function SingleRace() {
 
               <div className="result-payline">
                 {netResult >= 0
-                  ? <>Toplam kazanç <strong>+{fmt(totalWin)}</strong> · net <strong>{netResult >= 0 ? '+' : ''}{fmt(netResult)}</strong></>
+                  ? <>Toplam kazanç <strong>+{fmt(totalWin)}</strong> · net <strong>+{fmt(netResult)}</strong></>
                   : <>Toplam kazanç {fmt(totalWin)} · net <strong>−{fmt(Math.abs(netResult))}</strong></>}
               </div>
               <button className="btn btn-gold" onClick={newRound}>YENİ TUR</button>
@@ -265,7 +290,7 @@ export default function SingleRace() {
                     <span className="hform2"><b className={theme === 'grass' ? 'on' : ''}>ÇİM {h.fg}</b><b className={theme === 'sand' ? 'on' : ''}>KUM {h.fs}</b></span>
                   </span>
                   {betting ? (
-                    <span className="row-odds">{field.oddsWin[i].toFixed(2)}<small>x</small></span>
+                    <span className="row-odds">{baseWin[i].toFixed(2)}<small>x</small></span>
                   ) : (
                     <span className="hsteps">{lightM[i] > 0 ? <b className="lit-mini">⚡{lightM[i]}x</b> : `${Math.min(positions[i], trackLen)}/${trackLen}`}</span>
                   )}
@@ -273,19 +298,19 @@ export default function SingleRace() {
               )
             })}
           </div>
-          <p className="form-note">Oranlar gerçek kazanma şansını yansıtır (zemin/form etkiler). Şimşek bahsi bitiş sırasından bağımsızdır.</p>
+          <p className="form-note">Gösterilen oran şimşeksiz kazançtır. Ata şimşek çarparsa o bahis tutarsa çarpan kadar öder (bitiş sırasına göre Kazanan/Plase).</p>
         </div>
 
         <div className="card card-bet">
-          <div className="card-title">BAHİS {betting && pickHorse !== null && <span className="odds-tag">{pickType === 'simsek' ? 'ŞİMŞEK ⚡' : `${pickOdds.toFixed(2)}x`}</span>}</div>
+          <div className="card-title">BAHİS {betting && pickHorse !== null && <span className="odds-tag">{pickOdds.toFixed(2)}x</span>}</div>
           {betting && (
             <>
               <div className="set-label">Bahis Türü</div>
-              <div className="seg seg3">
+              <div className="seg">
                 {Object.values(BET_TYPES).map((t) => (
                   <button key={t.key} className={pickType === t.key ? 'active' : ''} onClick={() => setPickType(t.key)}>
                     <b>{t.label}</b>
-                    <small>{t.key === 'simsek' ? 'Çarpan' : pickHorse !== null ? `${(t.key === 'kazanan' ? field.oddsWin[pickHorse] : field.oddsPlase[pickHorse]).toFixed(2)}x` : t.hint}</small>
+                    <small>{pickHorse !== null ? `${baseOf(pickHorse, t.key).toFixed(2)}x` : t.hint}</small>
                   </button>
                 ))}
               </div>
@@ -309,7 +334,7 @@ export default function SingleRace() {
                       <span className="sr-name">{lineup[b.horse].name}</span>
                       <span className="sr-type">{BET_TYPES[b.type].label}</span>
                       <span className="sr-amt">{fmt(b.amount)}</span>
-                      <span className="sr-pot">{b.type === 'simsek' ? '⚡?' : `→ ${fmt(b.amount * b.odds)}`}</span>
+                      <span className="sr-pot">→ {fmt(b.amount * b.baseOdds)}</span>
                       <button className="sr-x" onClick={() => removeBet(i)}>✕</button>
                     </div>
                   ))}
@@ -349,8 +374,8 @@ export default function SingleRace() {
       </div>
 
       <p className="fineprint">
-        10 at · Kazanan (1.) ve Plase (ilk 3) oranları gerçek kazanma şansına göre · Şimşek: yarışta ata biriken çarpan kadar öder, bitiş sırasından bağımsız ·
-        Tüm bahislerde teorik RTP %92.9 · Çarpan tavanı 1000x · Demo kredisi gerçek para değildir.
+        7 at · Kazanan (1.) ve Plase (ilk 2) · Gösterilen oran şimşeksiz; ata şimşek çarparsa bahsin tutarsa çarpan kadar öder ·
+        Teorik RTP %92.9 · Çarpan tavanı 1000x · Demo kredisi gerçek para değildir.
       </p>
     </div>
   )
