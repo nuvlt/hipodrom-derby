@@ -30,12 +30,12 @@ const ROSTER = [
   { name: 'LODOS', fg: 77, fs: 90 }, { name: 'ALEV', fg: 86, fs: 79 },
   { name: 'KASIRGA', fg: 83, fs: 85 }, { name: 'BORA', fg: 80, fs: 82 },
   { name: 'TUFAN', fg: 89, fs: 78 }, { name: 'ZEYBEK', fg: 84, fs: 88 },
-  { name: 'YAĞIZ', fg: 78, fs: 86 }, { name: 'DORU', fg: 82, fs: 80 },
-  { name: 'KÜHEYLAN', fg: 90, fs: 89 }, { name: 'AKINCI', fg: 81, fs: 84 },
-  { name: 'CEYLAN', fg: 87, fs: 82 }, { name: 'ŞAHİN', fg: 85, fs: 87 },
-  { name: 'DOĞAN', fg: 83, fs: 85 }, { name: 'KARTAL', fg: 88, fs: 80 },
-  { name: 'ATMACA', fg: 79, fs: 89 }, { name: 'PARS', fg: 86, fs: 84 },
-  { name: 'ATEŞ', fg: 84, fs: 81 }, { name: 'TOROS', fg: 80, fs: 87 },
+  { name: 'ÇAĞLA', fg: 78, fs: 86 }, { name: 'ESRA', fg: 82, fs: 80 },
+  { name: 'YÜCEL', fg: 90, fs: 89 }, { name: 'ONUR', fg: 81, fs: 84 },
+  { name: 'ERDİ', fg: 87, fs: 82 }, { name: 'EMRAH', fg: 85, fs: 87 },
+  { name: 'FUAT', fg: 83, fs: 85 }, { name: 'MEVLÜT', fg: 88, fs: 80 },
+  { name: 'UFUK', fg: 79, fs: 89 }, { name: 'METİN', fg: 86, fs: 84 },
+  { name: 'BATU', fg: 84, fs: 81 }, { name: 'ERKAN', fg: 80, fs: 87 },
 ]
 
 export const fmt = (n) => n.toLocaleString('tr-TR', { maximumFractionDigits: 2, minimumFractionDigits: 0 })
