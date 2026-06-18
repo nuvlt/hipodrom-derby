@@ -116,17 +116,19 @@ export function oddsFromProb(p, target = TARGET_RTP, cap = 99) {
 }
 
 /* ==================================================================
-   ŞİMŞEK ÇARPANI — Kazanan/Plase içine gömülü (Lightning Roulette mantığı)
-   Baz oran = LIGHTNING_BETA * fair oran (gösterilen). Ata şimşek çarparsa
-   o atın bahsi tutarsa ödeme = γ * fair oran (γ ≥ ~1.2, üst üste çarparsa
-   büyür). Monte Carlo ile RTP üniform %92.9'a kalibre. Ödeme tavanı 1000x.
+   ŞİMŞEK ÇARPANI — Kazanan/Plase içine gömülü, ÇOKLU şimşek
+   Yarış başına ~3 ata çarpar (hepsine değil), her ata bir çarpan (γ)
+   düşer. γ bir KAT SAYIdır: bazen 0.8x bazen 3x — yani illa kazandırmaz.
+   Nadiren aynı ata 2. kez çarpıp çarpanı büyütür. Ödeme(tutan bahis) =
+   baz_oran * γ. Baz oran = LIGHTNING_BETA * fair. Monte Carlo ile RTP
+   üniform %92.9'a kalibre. Ödeme tavanı 1000x.
    ================================================================== */
 export const LIGHTNING_CAP = 1000
-export const LIGHTNING_BETA = 0.85
+export const LIGHTNING_BETA = 0.845
 const LG = {
-  Kv: [1, 2, 3], Kw: [0.48, 0.38, 0.14],
-  Bv: [1.2, 1.4, 1.7, 2.2, 3], Bw: [0.46, 0.28, 0.15, 0.08, 0.03],
-  Fv: [1.3, 1.6, 2, 2.5], Fw: [0.46, 0.30, 0.16, 0.08],
+  Kv: [2, 3, 4, 5], Kw: [0.22, 0.40, 0.27, 0.11], restrikeP: 0.12, gcap: 20,
+  Bv: [0.8, 1.0, 1.2, 1.5, 2.0, 3.0, 5], Bw: [0.18, 0.26, 0.26, 0.16, 0.08, 0.04, 0.02],
+  Gv: [1.4, 1.8, 2.5], Gw: [0.5, 0.33, 0.17],
 }
 function wsel(items, weights) {
   let r = Math.random() * weights.reduce((a, b) => a + b, 0)
@@ -137,10 +139,19 @@ export function genLightning(n = 7) {
   const K = wsel(LG.Kv, LG.Kw)
   const times = Array.from({ length: K }, () => 0.08 + Math.random() * 0.78).sort((a, b) => a - b)
   const G = Array(n).fill(0)
+  const lit = []
   const strikes = times.map((t) => {
-    const horse = Math.floor(Math.random() * n)
-    if (G[horse] === 0) G[horse] = wsel(LG.Bv, LG.Bw)
-    else G[horse] = Math.min(60, +(G[horse] * wsel(LG.Fv, LG.Fw)).toFixed(2))
+    let horse
+    const restrike = lit.length > 0 && Math.random() < LG.restrikeP
+    if (restrike) {
+      horse = lit[Math.floor(Math.random() * lit.length)]
+      G[horse] = Math.min(LG.gcap, +(G[horse] * wsel(LG.Gv, LG.Gw)).toFixed(2))
+    } else {
+      const free = []
+      for (let i = 0; i < n; i++) if (G[i] === 0) free.push(i)
+      if (free.length === 0) { horse = Math.floor(Math.random() * n); G[horse] = Math.min(LG.gcap, +(G[horse] * wsel(LG.Gv, LG.Gw)).toFixed(2)) }
+      else { horse = free[Math.floor(Math.random() * free.length)]; G[horse] = wsel(LG.Bv, LG.Bw); lit.push(horse) }
+    }
     return { horse, atProgress: t, gamma: G[horse] }
   })
   return { strikes, finalG: G.slice() }
@@ -247,9 +258,15 @@ export function RaceTrack({ theme, lineup, positions, trackLen, modeKey, lastRol
   return (
     <div className={`track theme-${theme}`}>
       <div className={`sky ${struck ? 'sky-flash' : ''}`} key={struck ? `sky${struck.id}` : 'sky'}>
-        <svg className="cloud" viewBox="0 0 120 40" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-          <ellipse cx="40" cy="26" rx="26" ry="13" /><ellipse cx="62" cy="20" rx="22" ry="15" />
-          <ellipse cx="82" cy="27" rx="22" ry="12" /><ellipse cx="58" cy="30" rx="34" ry="10" />
+        <svg className="cloud cloud-far" viewBox="0 0 200 64" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <g className="cl-shadow"><ellipse cx="56" cy="44" rx="34" ry="15" /><ellipse cx="92" cy="40" rx="30" ry="17" /><ellipse cx="124" cy="45" rx="28" ry="14" /></g>
+          <g className="cl-body"><ellipse cx="54" cy="40" rx="32" ry="15" /><ellipse cx="92" cy="35" rx="30" ry="18" /><ellipse cx="124" cy="41" rx="28" ry="15" /><ellipse cx="88" cy="46" rx="48" ry="12" /></g>
+          <g className="cl-light"><ellipse cx="78" cy="29" rx="18" ry="8" /><ellipse cx="108" cy="31" rx="15" ry="7" /></g>
+        </svg>
+        <svg className="cloud cloud-main" viewBox="0 0 200 64" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <g className="cl-shadow"><ellipse cx="58" cy="46" rx="40" ry="17" /><ellipse cx="100" cy="42" rx="36" ry="20" /><ellipse cx="138" cy="47" rx="34" ry="16" /></g>
+          <g className="cl-body"><ellipse cx="56" cy="42" rx="38" ry="17" /><ellipse cx="100" cy="36" rx="36" ry="21" /><ellipse cx="138" cy="43" rx="33" ry="17" /><ellipse cx="98" cy="49" rx="58" ry="13" /></g>
+          <g className="cl-light"><ellipse cx="82" cy="29" rx="22" ry="9" /><ellipse cx="118" cy="31" rx="18" ry="8" /><ellipse cx="60" cy="35" rx="12" ry="5" /></g>
         </svg>
         <span className="sky-label">⚡ ŞİMŞEK ALANI</span>
       </div>
@@ -275,7 +292,7 @@ export function RaceTrack({ theme, lineup, positions, trackLen, modeKey, lastRol
               <div className="lane-run">
                 <div className="lane-marks"><i /><i /><i /></div>
                 <div className={`runner ${zap ? 'zapped' : ''}`} key={zap ? `z${struck.id}` : `r${i}`} style={{ '--p': pct }}>
-                  {m > 0 && <span className={`lit-badge ${zap ? 'flash' : ''}`}>⚡{m}x</span>}
+                  {m > 0 && <span className={`lit-badge ${m < 1 ? 'low' : ''} ${zap ? 'flash' : ''}`}>⚡×{m}</span>}
                   <Horse silk={h.silk} number={i + 1} running={running} won={winnerIdx === i} />
                   {running && lastRolls[i] && (
                     <span className="roll-pop" key={tick} style={{ background: modeKey === 'renk' ? STEP_COLORS[lastRolls[i]] : 'var(--ivory)', color: modeKey === 'renk' ? '#fff' : '#1b1b1b' }}>+{lastRolls[i]}</span>
