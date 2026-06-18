@@ -124,11 +124,11 @@ export function oddsFromProb(p, target = TARGET_RTP, cap = 99) {
    üniform %92.9'a kalibre. Ödeme tavanı 1000x.
    ================================================================== */
 export const LIGHTNING_CAP = 1000
-export const LIGHTNING_BETA = 0.817
+export const LIGHTNING_BETA = 0.79
 const LG = {
-  Kv: [3, 4, 5], Kw: [0.48, 0.37, 0.15], restrikeP: 0.11, gcap: 20,
-  Bv: [0.7, 0.9, 1.1, 1.4, 1.8, 2.4, 3.5], Bw: [0.16, 0.21, 0.21, 0.16, 0.11, 0.09, 0.06],
-  Gv: [1.4, 1.7, 2.3], Gw: [0.48, 0.34, 0.18],
+  Kv: [4, 5, 6], Kw: [0.22, 0.46, 0.32], restrikeP: 0.10, gcap: 25,
+  Bv: [0.5, 0.7, 0.9, 1.1, 1.5, 2.0, 3.0, 5], Bw: [0.22, 0.22, 0.16, 0.11, 0.09, 0.08, 0.06, 0.06],
+  Gv: [1.4, 1.8, 2.5], Gw: [0.45, 0.35, 0.20],
 }
 function wsel(items, weights) {
   let r = Math.random() * weights.reduce((a, b) => a + b, 0)
