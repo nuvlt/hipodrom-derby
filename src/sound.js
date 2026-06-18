@@ -146,3 +146,14 @@ export function lose() {
   tone(392, t, 0.16, { type: 'sine', vol: 0.12, glideTo: 300 })
   tone(294, t + 0.14, 0.22, { type: 'sine', vol: 0.12, glideTo: 220 })
 }
+
+/* şimşek çarpması — kısa elektrik cızırtısı + yüksek nota */
+export function zap() {
+  if (muted) return
+  const c = ac()
+  if (!c) return
+  const t = c.currentTime
+  tone(1600, t, 0.06, { type: 'sawtooth', vol: 0.10 })
+  tone(1100, t + 0.05, 0.10, { type: 'triangle', vol: 0.11 })
+  tone(2200, t + 0.02, 0.05, { type: 'square', vol: 0.05 })
+}
