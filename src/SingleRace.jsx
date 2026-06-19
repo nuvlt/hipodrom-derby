@@ -223,6 +223,7 @@ export default function SingleRace() {
           modeKey={modeKey} lastRolls={lastRolls} tick={tick}
           mineIdxs={mineIdxs} winnerIdx={winner} placeIdxs={placeIdxs}
           lightM={lightM} struck={struck} running={phase === 'racing'}
+          betOdds={baseWin} showOdds={betting}
         />
 
         {phase === 'result' && winner !== null && (
