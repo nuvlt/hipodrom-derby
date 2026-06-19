@@ -264,7 +264,7 @@ function CloudShape({ variant }) {
   )
 }
 
-export function RaceTrack({ theme, lineup, positions, trackLen, modeKey, lastRolls, tick, mineIdxs = [], winnerIdx, placeIdxs = [], lightM = [], struck, running }) {
+export function RaceTrack({ theme, lineup, positions, trackLen, modeKey, lastRolls, tick, mineIdxs = [], winnerIdx, placeIdxs = [], lightM = [], struck, running, betOdds = [], showOdds = false }) {
   return (
     <div className={`track theme-${theme}`}>
       <div className={`sky ${struck ? 'sky-flash' : ''}`} key={struck ? `sky${struck.id}` : 'sky'}>
@@ -296,6 +296,7 @@ export function RaceTrack({ theme, lineup, positions, trackLen, modeKey, lastRol
                 <div className="lane-marks"><i /><i /><i /></div>
                 <div className={`runner ${zap ? 'zapped' : ''}`} key={zap ? `z${struck.id}` : `r${i}`} style={{ '--p': pct }}>
                   {m > 0 && <span className={`lit-badge ${m < 1 ? 'low' : ''} ${zap ? 'flash' : ''}`}>⚡×{m}</span>}
+                  {showOdds && betOdds[i] != null && <span className="odds-badge">×{betOdds[i].toFixed(2)}</span>}
                   <Horse silk={h.silk} number={i + 1} running={running} won={winnerIdx === i} />
                   {running && lastRolls[i] && (
                     <span className="roll-pop" key={tick} style={{ background: modeKey === 'renk' ? STEP_COLORS[lastRolls[i]] : 'var(--ivory)', color: modeKey === 'renk' ? '#fff' : '#1b1b1b' }}>+{lastRolls[i]}</span>
