@@ -228,7 +228,12 @@ export default function SingleRace() {
         {phase === 'result' && winner !== null && (
           <div className="result-overlay">
             <div className={`result-card ${netResult >= 0 ? 'win' : 'lose'}`}>
-              <div className="result-eyebrow">FOTO FİNİŞ</div>
+              <div className={`result-status ${netResult > 0 ? 'win' : netResult < 0 ? 'lose' : 'even'}`}>
+                <span className="rs-big">{netResult > 0 ? 'KAZANDIN' : netResult < 0 ? 'KAYBETTİN' : 'BAŞA BAŞ'}</span>
+                {netResult !== 0 && <span className="rs-amt">{netResult > 0 ? '+' : '−'}{fmt(Math.abs(netResult))} TL</span>}
+              </div>
+
+              <div className="result-eyebrow">FOTO FİNİŞ · KAZANAN</div>
               <div className="result-horse">
                 <span className="history-dot big" style={{ background: SILKS[winner] }}>{winner + 1}</span>
                 {lineup[winner].name}
@@ -240,22 +245,26 @@ export default function SingleRace() {
               </div>
 
               {betResults.length > 0 && (
-                <div className="slip-results">
-                  {betResults.map((r, i) => (
-                    <div key={i} className={`sr-row ${r.hit ? 'ok' : 'no'} ${r.boosted ? 'boost' : ''}`}>
-                      <span className="sr-silk" style={{ background: lineup[r.horse].silk }}>{r.horse + 1}</span>
-                      <span className="sr-name">{lineup[r.horse].name}</span>
-                      <span className="sr-type">{BET_TYPES[r.type].label}{r.boosted ? <em className="boost-tag">⚡×{fmtMult(r.factor)}</em> : ''}</span>
-                      <span className="sr-amt">{fmt(r.amount)}</span>
-                      <span className="sr-win">{r.hit ? `+${fmt(r.win)}` : '—'}</span>
-                    </div>
-                  ))}
-                </div>
+                <>
+                  <div className="res-label">BAHİSLERİN</div>
+                  <div className="slip-results">
+                    {betResults.map((r, i) => (
+                      <div key={i} className={`sr-row ${r.hit ? 'ok' : 'no'} ${r.boosted ? 'boost' : ''}`}>
+                        <span className="sr-mark">{r.hit ? '✓' : '✗'}</span>
+                        <span className="sr-silk" style={{ background: lineup[r.horse].silk }}>{r.horse + 1}</span>
+                        <span className="sr-name">{lineup[r.horse].name}</span>
+                        <span className="sr-type">{BET_TYPES[r.type].label}{r.boosted ? <em className="boost-tag">⚡×{fmtMult(r.factor)}</em> : ''}</span>
+                        <span className="sr-amt">{fmt(r.amount)}</span>
+                        <span className="sr-win">{r.hit ? `+${fmt(r.win)}` : 'kaybetti'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
 
               {lightning && lightning.finalG.some((g) => g > 0) && (
                 <div className="light-summary">
-                  <span className="ls-title">⚡ BİTİŞ ÇARPANLARI</span>
+                  <span className="ls-title">⚡ ÇARPAN ALAN ATLAR</span>
                   <div className="ls-row">
                     {lineup.map((h, i) => {
                       const g = lightning.finalG[i]
@@ -270,10 +279,10 @@ export default function SingleRace() {
                 </div>
               )}
 
-              <div className="result-payline">
-                {netResult >= 0
-                  ? <>Toplam kazanç <strong>+{fmt(totalWin)}</strong> · net <strong>+{fmt(netResult)}</strong></>
-                  : <>Toplam kazanç {fmt(totalWin)} · net <strong>−{fmt(Math.abs(netResult))}</strong></>}
+              <div className="result-totals">
+                <div><span>YATIRDIN</span><b>{fmt(totalStake)}</b></div>
+                <div><span>KAZANDIN</span><b className="tw">{fmt(totalWin)}</b></div>
+                <div className="net-cell"><span>NET</span><b className={netResult >= 0 ? 'pos' : 'neg'}>{netResult >= 0 ? '+' : '−'}{fmt(Math.abs(netResult))}</b></div>
               </div>
               <button className="btn btn-gold" onClick={newRound}>YENİ TUR</button>
             </div>
@@ -329,9 +338,19 @@ export default function SingleRace() {
         </div>
 
         <div className="card card-bet">
-          <div className="card-title">BAHİS {betting && pickHorse !== null && <span className="odds-tag">{pickOdds.toFixed(2)}x</span>}</div>
+          <div className="card-title">BAHİS</div>
           {betting && (
             <>
+              {pickHorse === null ? (
+                <div className="bet-pick empty">⬑ Önce listeden bir at seç</div>
+              ) : (
+                <div className="bet-pick">
+                  <span className="bp-tag">OYNADIĞIN AT</span>
+                  <span className="silk" style={{ background: lineup[pickHorse].silk }}>{pickHorse + 1}</span>
+                  <span className="bp-name">{lineup[pickHorse].name}</span>
+                  <span className="bp-odds">{pickOdds.toFixed(2)}<small>x</small></span>
+                </div>
+              )}
               <div className="set-label">Bahis Türü</div>
               <div className="seg">
                 {Object.values(BET_TYPES).map((t) => (
@@ -347,7 +366,7 @@ export default function SingleRace() {
                 <input className="stake-input" type="number" min="0" value={pickAmount || ''} onChange={(e) => setCustom(e.target.value)} placeholder="0" />
               </div>
               <button className="btn btn-add" disabled={pickHorse === null || pickAmount <= 0} onClick={addBet}>
-                {pickHorse === null ? 'ÖNCE AT SEÇ' : pickAmount <= 0 ? 'MİKTAR GİR' : `+ FİŞE EKLE (başka at için)`}
+                {pickHorse === null ? 'ÖNCE AT SEÇ' : pickAmount <= 0 ? 'MİKTAR GİR' : `+ FİŞE EKLE: ${lineup[pickHorse].name} ${BET_TYPES[pickType].label} ${fmt(pickAmount)}`}
               </button>
 
               <div className="set-label slip-label">BAHİS FİŞİ {bets.length > 0 && `(${bets.length})`}</div>
