@@ -188,7 +188,7 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 /* ---------------- sonuç ---------------- */
 .result-overlay {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
   background: rgba(8, 14, 11, .72); backdrop-filter: blur(3px); animation: fadein .3s ease;
 }
 @keyframes fadein { from { opacity: 0; } }
@@ -216,6 +216,40 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 .result-payline { color: var(--ivory-dim); margin-bottom: 18px; font-size: 14px; }
 .result-card.win .result-payline strong { color: var(--green); font-size: 17px; }
+
+/* büyük KAZANDIN / KAYBETTİN bandı */
+.result-status { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 0 0 14px; padding: 12px 18px; border-radius: 12px; }
+.result-status .rs-big { font-family: var(--display); font-weight: 800; font-size: 30px; letter-spacing: 2px; line-height: 1; }
+.result-status .rs-amt { font-family: var(--display); font-weight: 700; font-size: 19px; }
+.result-status.win { background: linear-gradient(180deg, rgba(46,194,126,.18), rgba(46,194,126,.05)); border: 1px solid rgba(46,194,126,.5); }
+.result-status.win .rs-big, .result-status.win .rs-amt { color: var(--green); }
+.result-status.lose { background: linear-gradient(180deg, rgba(226,72,74,.16), rgba(226,72,74,.05)); border: 1px solid rgba(226,72,74,.45); }
+.result-status.lose .rs-big, .result-status.lose .rs-amt { color: #ff8587; }
+.result-status.even { background: rgba(255,255,255,.05); border: 1px solid var(--line); }
+.result-status.even .rs-big { color: var(--ivory-dim); }
+
+.res-label { font-size: 10px; letter-spacing: 2px; color: var(--ivory-dim); margin: 8px auto 4px; text-align: left; max-width: 400px; width: 100%; }
+.sr-mark { font-weight: 800; font-size: 14px; text-align: center; }
+.sr-row.ok .sr-mark { color: var(--green); }
+.sr-row.no .sr-mark { color: #ff8587; }
+
+/* 3'lü toplam: yatırdın / kazandın / net */
+.result-totals { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; max-width: 400px; margin: 12px auto 16px; }
+.result-totals > div { background: rgba(0,0,0,.2); border-radius: 9px; padding: 8px 6px; display: flex; flex-direction: column; gap: 3px; }
+.result-totals span { font-size: 9px; letter-spacing: 1.3px; color: var(--ivory-dim); }
+.result-totals b { font-family: var(--display); font-weight: 800; font-size: 18px; }
+.result-totals .tw { color: var(--green); }
+.result-totals .net-cell { border: 1px solid var(--line); background: rgba(0,0,0,.32); }
+.result-totals .pos { color: var(--green); }
+.result-totals .neg { color: #ff8587; }
+
+/* bahis kartı: oynadığın at bandı */
+.bet-pick { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border-radius: 10px; margin-bottom: 12px; background: rgba(232,182,76,.1); border: 1px solid var(--gold-deep); }
+.bet-pick .bp-tag { font-size: 9px; letter-spacing: 1.2px; color: var(--gold); font-weight: 700; }
+.bet-pick .bp-name { font-family: var(--display); font-weight: 800; font-size: 18px; letter-spacing: .5px; flex: 1; text-align: left; }
+.bet-pick .bp-odds { font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--gold); }
+.bet-pick .bp-odds small { font-size: 11px; opacity: .8; }
+.bet-pick.empty { justify-content: center; background: rgba(255,255,255,.03); border: 1px dashed var(--line); color: var(--ivory-dim); font-size: 13px; font-weight: 600; }
 
 /* ---------------- alt güverte ---------------- */
 .deck {
@@ -780,7 +814,7 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 /* sonuç ekranı bahis dökümü */
 .slip-results { display: flex; flex-direction: column; gap: 5px; width: 100%; max-width: 400px; margin: 8px auto 6px; }
-.sr-row { display: grid; grid-template-columns: 20px 1fr auto auto auto; align-items: center; gap: 8px; font-size: 13px; padding: 5px 9px; border-radius: 8px; }
+.sr-row { display: grid; grid-template-columns: 16px 20px 1fr auto auto auto; align-items: center; gap: 8px; font-size: 13px; padding: 5px 9px; border-radius: 8px; }
 .sr-row.ok { background: rgba(46,194,126,.13); }
 .sr-row.no { background: rgba(255,255,255,.03); opacity: .65; }
 .sr-win { font-family: var(--display); font-weight: 800; }
